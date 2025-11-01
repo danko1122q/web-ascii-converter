@@ -25,8 +25,6 @@ const downloadBtn = document.getElementById('downloadBtn');
 const copyAsciiBtn = document.getElementById('copyAsciiBtn');
 const resetBtn = document.getElementById('resetBtn');
 const colorBtns = document.querySelectorAll('.color-btn');
-const sizeBtns = document.querySelectorAll('.size-btn');
-const customSizeGroup = document.getElementById('customSizeGroup');
 const infoBar = document.getElementById('infoBar');
 const dimensions = document.getElementById('dimensions');
 const characters = document.getElementById('characters');
@@ -63,7 +61,6 @@ let fps = 0;
 let webcamStream = null;
 let isFullscreen = false;
 let currentAsciiText = '';
-let sizeMode = 'auto';
 let originalImageWidth = 0;
 let originalImageHeight = 0;
 
@@ -82,16 +79,16 @@ const charSets = {
     detailed: ' .\'",:;!~-_+<>i?/\\|()1{}[]rcvunxzjftLCJUYXZO0Qoahkbdpqwm*WMB8&%$#@',
     simple: ' .+#@',
     blocks: ' ░▒▓█',
-    binary: ' 0123456789',  // Diubah dari ' 01' menjadi ' 0123456789'
+    binary: ' 0123456789',
     enhanced: ' .\'`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$'
 };
 
 // Quality presets
 const qualityPresets = {
-    1: { name: 'Rendah', scale: 0.5 },
-    2: { name: 'Sedang', scale: 0.75 },
-    3: { name: 'Bagus', scale: 1 },
-    4: { name: 'Tinggi', scale: 1.5 },
+    1: { name: 'Low', scale: 0.5 },
+    2: { name: 'Medium', scale: 0.75 },
+    3: { name: 'Good', scale: 1 },
+    4: { name: 'High', scale: 1.5 },
     5: { name: 'Ultra', scale: 2 }
 };
 
@@ -126,7 +123,7 @@ function setupEventListeners() {
                 resetBtn.style.display = 'block';
                 stopWebcam();
                 emptyState.querySelector('.empty-state-icon').textContent = '🖼️';
-                emptyState.querySelector('.empty-state-text').textContent = 'Seni ASCII Anda akan muncul di sini';
+                emptyState.querySelector('.empty-state-text').textContent = 'Your ASCII art will appear here';
             } else if (currentMode === 'video') {
                 videoSection.classList.add('active');
                 videoControls.style.display = 'flex';
@@ -135,7 +132,7 @@ function setupEventListeners() {
                 resetBtn.style.display = 'none';
                 stopWebcam();
                 emptyState.querySelector('.empty-state-icon').textContent = '🎬';
-                emptyState.querySelector('.empty-state-text').textContent = 'Video ASCII Anda akan muncul di sini';
+                emptyState.querySelector('.empty-state-text').textContent = 'Your ASCII video will appear here';
             } else if (currentMode === 'webcam') {
                 webcamSection.classList.add('active');
                 videoControls.style.display = 'flex';
@@ -143,28 +140,10 @@ function setupEventListeners() {
                 copyAsciiBtn.style.display = 'none';
                 resetBtn.style.display = 'none';
                 emptyState.querySelector('.empty-state-icon').textContent = '📹';
-                emptyState.querySelector('.empty-state-text').textContent = 'Mulai webcam untuk melihat ASCII langsung';
+                emptyState.querySelector('.empty-state-text').textContent = 'Start webcam to see live ASCII';
             }
 
             resetCanvas();
-        });
-    });
-
-    // Size mode switching
-    sizeBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            sizeBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            sizeMode = btn.dataset.size;
-            
-            if (sizeMode === 'auto') {
-                customSizeGroup.style.display = 'none';
-                if (currentImage) {
-                    convertToAscii(currentImage);
-                }
-            } else {
-                customSizeGroup.style.display = 'block';
-            }
         });
     });
 
@@ -282,7 +261,7 @@ function setupEventListeners() {
     // Sliders
     widthSlider.addEventListener('input', (e) => {
         widthValue.textContent = e.target.value;
-        if (currentMode === 'image' && currentImage && sizeMode === 'custom') {
+        if (currentMode === 'image' && currentImage) {
             convertToAscii(currentImage);
         }
     });
@@ -372,7 +351,7 @@ function setupEventListeners() {
 
     // Handle window resize
     window.addEventListener('resize', () => {
-        if (currentImage && sizeMode === 'auto' && !isFullscreen) {
+        if (currentImage && !isFullscreen) {
             convertToAscii(currentImage);
         }
     });
@@ -427,7 +406,7 @@ function resetPan() {
 }
 
 function loadImage(file) {
-    showProcessing('Memuat gambar...');
+    showProcessing('Loading image...');
     const reader = new FileReader();
     reader.onload = (e) => {
         const img = new Image();
@@ -446,20 +425,20 @@ function loadImage(file) {
             hideProcessing();
         };
         img.onerror = () => {
-            showToast('Error memuat gambar. Silakan coba file lain.', 'error');
+            showToast('Error loading image. Please try another file.', 'error');
             hideProcessing();
         };
         img.src = e.target.result;
     };
     reader.onerror = () => {
-        showToast('Error membaca file. Silakan coba gambar lain.', 'error');
+        showToast('Error reading file. Please try another image.', 'error');
         hideProcessing();
     };
     reader.readAsDataURL(file);
 }
 
 function loadVideo(file) {
-    showProcessing('Memuat video...');
+    showProcessing('Loading video...');
     stopVideo();
     stopWebcam();
     
@@ -486,7 +465,7 @@ function loadVideo(file) {
     };
     
     videoSource.onerror = (e) => {
-        showToast('Tidak dapat memuat video. Silakan coba format lain (MP4, WebM, OGG, MOV, AVI, MKV).', 'error');
+        showToast('Cannot load video. Please try another format (MP4, WebM, OGG, MOV, AVI, MKV).', 'error');
         resetCanvas();
         hideProcessing();
     };
@@ -495,11 +474,11 @@ function loadVideo(file) {
 async function toggleWebcam() {
     if (webcamStream) {
         stopWebcam();
-        startWebcamBtn.textContent = 'Mulai Webcam';
+        startWebcamBtn.textContent = 'Start Webcam';
         captureFrameBtn.disabled = true;
     } else {
         try {
-            showProcessing('Memulai webcam...');
+            showProcessing('Starting webcam...');
             webcamStream = await navigator.mediaDevices.getUserMedia({ 
                 video: { 
                     width: { ideal: 1280 },
@@ -522,7 +501,7 @@ async function toggleWebcam() {
             playVideo();
             hideProcessing();
         } catch (error) {
-            showToast('Tidak dapat mengakses webcam. Silakan izinkan akses kamera.', 'error');
+            showToast('Cannot access webcam. Please allow camera permission.', 'error');
             hideProcessing();
         }
     }
@@ -559,7 +538,7 @@ function playVideo() {
         videoSource.play();
     }
     
-    playPauseBtn.textContent = '⏸ Jeda';
+    playPauseBtn.textContent = '⏸ Pause';
     playPauseBtn.classList.add('playing');
     
     renderVideoFrame();
@@ -572,7 +551,7 @@ function pauseVideo() {
         videoSource.pause();
     }
     
-    playPauseBtn.textContent = '▶ Putar';
+    playPauseBtn.textContent = '▶ Play';
     playPauseBtn.classList.remove('playing');
     
     if (animationId) {
@@ -589,7 +568,7 @@ function stopVideo() {
         videoSource.currentTime = 0;
     }
     
-    playPauseBtn.textContent = '▶ Putar';
+    playPauseBtn.textContent = '▶ Play';
     playPauseBtn.classList.remove('playing');
     
     if (animationId) {
@@ -610,7 +589,7 @@ function stopWebcam() {
     
     videoSource.srcObject = null;
     
-    playPauseBtn.textContent = '▶ Putar';
+    playPauseBtn.textContent = '▶ Play';
     playPauseBtn.classList.remove('playing');
     
     if (animationId) {
@@ -621,7 +600,7 @@ function stopWebcam() {
     fpsDisplay.textContent = '0 FPS';
     
     if (startWebcamBtn) {
-        startWebcamBtn.textContent = 'Mulai Webcam';
+        startWebcamBtn.textContent = 'Start Webcam';
     }
 }
 
@@ -650,28 +629,14 @@ function renderVideoFrame() {
 }
 
 function calculateOptimalDimensions(sourceWidth, sourceHeight) {
-    const containerWidth = canvasContainer.clientWidth - 40;
-    const containerHeight = window.innerHeight - 300;
+    const containerWidth = canvasContainer.clientWidth - 30;
+    const containerHeight = canvasContainer.clientHeight - 30;
     const quality = parseInt(qualitySlider.value);
     const qualityScale = qualityPresets[quality].scale;
     
-    let width, height;
-    
-    if (sizeMode === 'auto') {
-        const maxCharWidth = Math.floor(containerWidth / 8);
-        const maxCharHeight = Math.floor(containerHeight / 16);
-        
-        const aspectRatio = sourceHeight / sourceWidth;
-        const calculatedWidth = Math.min(maxCharWidth, Math.floor(sourceWidth / 10 * qualityScale));
-        const calculatedHeight = Math.floor(calculatedWidth * aspectRatio * 0.5);
-        
-        width = Math.max(50, Math.min(300, calculatedWidth));
-        height = Math.floor(width * aspectRatio * 0.5);
-    } else {
-        width = parseInt(widthSlider.value);
-        const aspectRatio = sourceHeight / sourceWidth;
-        height = Math.floor(width * aspectRatio * 0.5);
-    }
+    const width = parseInt(widthSlider.value);
+    const aspectRatio = sourceHeight / sourceWidth;
+    const height = Math.floor(width * aspectRatio * 0.5);
     
     return { width, height };
 }
@@ -772,9 +737,9 @@ function convertToAscii(source) {
             }
         }
 
-        dimensions.textContent = `${width} × ${height} karakter`;
-        characters.textContent = `${width * height} total karakter`;
-        imageSize.textContent = `Asli: ${sourceWidth} × ${sourceHeight}px`;
+        dimensions.textContent = `${width} × ${height} characters`;
+        characters.textContent = `${width * height} total characters`;
+        imageSize.textContent = `Original: ${sourceWidth} × ${sourceHeight}px`;
     } catch (error) {
         console.error('Error in convertToAscii:', error);
     }
@@ -821,7 +786,7 @@ function enterFullscreen() {
     canvasContainer.classList.add('fullscreen');
     fullscreenHeader.style.display = 'flex';
     isFullscreen = true;
-    fullscreenBtn.textContent = 'Keluar Layar Penuh';
+    fullscreenBtn.textContent = 'Exit Fullscreen';
     
     // Reset zoom and pan when entering fullscreen
     setZoom(1);
@@ -837,7 +802,7 @@ function exitFullscreen() {
     canvasContainer.classList.remove('fullscreen');
     fullscreenHeader.style.display = 'none';
     isFullscreen = false;
-    fullscreenBtn.textContent = 'Layar Penuh';
+    fullscreenBtn.textContent = 'Fullscreen';
     
     // Reset zoom and pan when exiting fullscreen
     setZoom(1);
@@ -846,16 +811,16 @@ function exitFullscreen() {
 
 function copyAsciiToClipboard() {
     if (!currentAsciiText) {
-        showToast('Tidak ada seni ASCII untuk disalin', 'error');
+        showToast('No ASCII art to copy', 'error');
         return;
     }
     
     navigator.clipboard.writeText(currentAsciiText)
         .then(() => {
-            showToast('Seni ASCII berhasil disalin!', 'success');
+            showToast('ASCII art copied to clipboard!', 'success');
         })
         .catch(err => {
-            showToast('Gagal menyalin seni ASCII', 'error');
+            showToast('Failed to copy ASCII art', 'error');
         });
 }
 
@@ -877,7 +842,7 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-function showProcessing(text = 'Memproses...') {
+function showProcessing(text = 'Processing...') {
     processingText.textContent = text;
     processingOverlay.style.display = 'flex';
 }
@@ -908,7 +873,7 @@ function resetCanvas() {
     stopBtn.disabled = true;
     captureFrameBtn.disabled = true;
     fullscreenBtn.disabled = true;
-    fullscreenBtn.textContent = 'Layar Penuh';
+    fullscreenBtn.textContent = 'Fullscreen';
     
     if (videoSource.src) {
         URL.revokeObjectURL(videoSource.src);
@@ -917,7 +882,7 @@ function resetCanvas() {
     }
     
     isPlaying = false;
-    playPauseBtn.textContent = '▶ Putar';
+    playPauseBtn.textContent = '▶ Play';
     playPauseBtn.classList.remove('playing');
     fpsDisplay.textContent = '0 FPS';
     
