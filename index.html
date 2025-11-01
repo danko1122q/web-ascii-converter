@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="fullscreen-header" id="fullscreenHeader">
-        <div class="fullscreen-title">ASCII Art Converter - Mode Layar Penuh</div>
+        <div class="fullscreen-title">ASCII Art Converter - Fullscreen Mode</div>
         <div class="fullscreen-controls">
             <div class="zoom-controls">
                 <button class="zoom-btn" id="zoomOutBtn" title="Zoom Out">➖</button>
@@ -16,19 +16,19 @@
                 <button class="zoom-btn" id="zoomInBtn" title="Zoom In">➕</button>
                 <button class="zoom-btn" id="zoomResetBtn" title="Reset Zoom">🔄</button>
             </div>
-            <button class="fullscreen-close" id="fullscreenCloseBtn">Keluar Layar Penuh</button>
+            <button class="fullscreen-close" id="fullscreenCloseBtn">Exit Fullscreen</button>
         </div>
     </div>
 
     <div class="container">
         <header>
             <h1>ASCII Art Converter Pro</h1>
-            <p class="subtitle">Ubah gambar, video, dan webcam menjadi seni teks yang tajam dan jelas</p>
+            <p class="subtitle">Transform images, videos, and webcam into sharp, clear text-based art</p>
             <p class="copyright">© 2023 Davanico Ady Nugroho</p>
         </header>
 
         <div class="mode-tabs">
-            <button class="tab-btn active" data-mode="image">📷 Gambar</button>
+            <button class="tab-btn active" data-mode="image">📷 Image</button>
             <button class="tab-btn" data-mode="video">🎬 Video</button>
             <button class="tab-btn" data-mode="webcam">📹 Webcam</button>
         </div>
@@ -39,7 +39,7 @@
                 <div class="content-section active" id="imageSection">
                     <div class="upload-area" id="uploadArea">
                         <div class="upload-icon">📎</div>
-                        <div class="upload-text">Seret gambar di sini</div>
+                        <div class="upload-text">Drop image here</div>
                         <div class="upload-subtext">JPG, PNG, GIF, WEBP, BMP, TIFF, SVG</div>
                     </div>
                     <input type="file" id="fileInput" accept="image/*">
@@ -49,7 +49,7 @@
                 <div class="content-section" id="videoSection">
                     <div class="upload-area" id="videoUploadArea">
                         <div class="upload-icon">🎥</div>
-                        <div class="upload-text">Seret video di sini</div>
+                        <div class="upload-text">Drop video here</div>
                         <div class="upload-subtext">MP4, WebM, OGG, MOV, AVI, MKV, 3GP</div>
                     </div>
                     <input type="file" id="videoInput" accept="video/*">
@@ -59,83 +59,73 @@
                 <div class="content-section" id="webcamSection">
                     <div class="upload-area webcam-area">
                         <div class="upload-icon">📹</div>
-                        <div class="upload-text">Webcam Langsung</div>
-                        <div class="upload-subtext">Seni ASCII real-time</div>
+                        <div class="upload-text">Webcam Live</div>
+                        <div class="upload-subtext">Real-time ASCII art</div>
                     </div>
                     <div class="button-group">
-                        <button class="action-btn" id="startWebcamBtn" style="margin-top: 0;">Mulai Webcam</button>
-                        <button class="action-btn" id="captureFrameBtn" style="margin-top: 0;" disabled>Tangkap Frame</button>
+                        <button class="action-btn" id="startWebcamBtn" style="margin-top: 0;">Start Webcam</button>
+                        <button class="action-btn" id="captureFrameBtn" style="margin-top: 0;" disabled>Capture Frame</button>
                     </div>
                 </div>
 
                 <div class="controls">
                     <div class="control-group">
                         <label class="control-label">
-                            Mode Ukuran
-                        </label>
-                        <div class="button-group">
-                            <button class="size-btn active" data-size="auto">Otomatis</button>
-                            <button class="size-btn" data-size="custom">Kustom</button>
-                        </div>
-                    </div>
-
-                    <div class="control-group" id="customSizeGroup" style="display: none;">
-                        <label class="control-label">
-                            Lebar <span class="slider-value" id="widthValue">100</span>
+                            Width <span class="slider-value" id="widthValue">100</span>
                         </label>
                         <input type="range" id="widthSlider" min="50" max="300" value="100">
                     </div>
 
                     <div class="control-group">
                         <label class="control-label">
-                            Kualitas <span class="slider-value" id="qualityValue">Tinggi</span>
+                            Quality <span class="slider-value" id="qualityValue">High</span>
                         </label>
                         <input type="range" id="qualitySlider" min="1" max="5" value="4">
                     </div>
 
                     <div class="control-group">
-                        <label class="control-label">Ukuran Font <span class="slider-value" id="fontValue">10</span>px</label>
+                        <label class="control-label">Font Size <span class="slider-value" id="fontValue">10</span>px</label>
                         <input type="range" id="fontSlider" min="6" max="20" value="10">
                     </div>
 
                     <div class="control-group">
-                        <label class="control-label">Kontras <span class="slider-value" id="contrastValue">1.3</span></label>
+                        <label class="control-label">Contrast <span class="slider-value" id="contrastValue">1.3</span></label>
                         <input type="range" id="contrastSlider" min="1.0" max="2.5" step="0.1" value="1.3">
                     </div>
 
                     <div class="control-group">
-                        <label class="control-label">Kecerahan <span class="slider-value" id="brightnessValue">1.2</span></label>
+                        <label class="control-label">Brightness <span class="slider-value" id="brightnessValue">1.2</span></label>
                         <input type="range" id="brightnessSlider" min="0.5" max="2.0" step="0.1" value="1.2">
                     </div>
 
                     <div class="control-group">
-                        <label class="control-label">Ketajaman <span class="slider-value" id="sharpnessValue">1.2</span></label>
+                        <label class="control-label">Sharpness <span class="slider-value" id="sharpnessValue">1.2</span></label>
                         <input type="range" id="sharpnessSlider" min="0.5" max="2.0" step="0.1" value="1.2">
                     </div>
 
                     <div class="control-group">
-                        <label class="control-label">Mode Warna</label>
+                        <label class="control-label">Color Mode</label>
                         <div class="button-group">
-                            <button class="color-btn active" data-color="colorful">Warna Penuh</button>
-                            <button class="color-btn" data-color="green">Hijau</button>
-                            <button class="color-btn" data-color="bw">Hitam Putih</button>
+                            <button class="color-btn active" data-color="colorful">Full Color</button>
+                            <button class="color-btn" data-color="green">Green</button>
+                            <button class="color-btn" data-color="bw">B&W</button>
                             <button class="color-btn" data-color="retro">Retro</button>
                         </div>
                     </div>
 
                     <div class="control-group">
-                        <label class="control-label">Set Karakter</label>
+                        <label class="control-label">Character Set</label>
                         <select id="charSet">
-                            <option value="standard">Standar</option>
-                            <option value="detailed">Detail</option>
-                            <option value="simple">Sederhana</option>
-                            <option value="blocks">Blok</option>
-                            <option value="binary">Biner</option>
+                            <option value="standard">Standard</option>
+                            <option value="detailed">Detailed</option>
+                            <option value="simple">Simple</option>
+                            <option value="blocks">Blocks</option>
+                            <option value="binary">Numbers</option>
                             <option value="enhanced" selected>Enhanced Dark</option>
                         </select>
                     </div>
 
-                    <button class="action-btn" id="downloadBtn" disabled>Unduh Gambar</button>
+                    <button class="action-btn" id="downloadBtn" disabled>Download Image</button>
                 </div>
             </div>
 
@@ -143,11 +133,11 @@
                 <div class="canvas-container empty" id="canvasContainer">
                     <div class="processing-overlay" id="processingOverlay">
                         <div class="spinner"></div>
-                        <div id="processingText">Memproses...</div>
+                        <div id="processingText">Processing...</div>
                     </div>
                     <div class="empty-state" id="emptyState">
                         <div class="empty-state-icon">🖼️</div>
-                        <div class="empty-state-text">Seni ASCII Anda akan muncul di sini</div>
+                        <div class="empty-state-text">Your ASCII art will appear here</div>
                     </div>
                     <div class="canvas-wrapper" id="canvasWrapper">
                         <canvas id="asciiCanvas"></canvas>
@@ -156,14 +146,14 @@
                 </div>
 
                 <div class="canvas-controls">
-                    <button class="canvas-btn" id="copyAsciiBtn" disabled>Salin ASCII</button>
-                    <button class="canvas-btn" id="fullscreenBtn" disabled>Layar Penuh</button>
+                    <button class="canvas-btn" id="copyAsciiBtn" disabled>Copy ASCII</button>
+                    <button class="canvas-btn" id="fullscreenBtn" disabled>Fullscreen</button>
                     <button class="canvas-btn" id="resetBtn" disabled>Reset</button>
                 </div>
 
                 <div class="video-controls" id="videoControls" style="display: none;">
-                    <button class="video-btn" id="playPauseBtn">▶ Putar</button>
-                    <button class="video-btn" id="stopBtn">⏹ Berhenti</button>
+                    <button class="video-btn" id="playPauseBtn">▶ Play</button>
+                    <button class="video-btn" id="stopBtn">⏹ Stop</button>
                     <span class="fps-display" id="fpsDisplay">0 FPS</span>
                 </div>
 
