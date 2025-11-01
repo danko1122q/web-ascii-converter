@@ -6,6 +6,7 @@ const videoInput = document.getElementById('videoInput');
 const canvas = document.getElementById('asciiCanvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
 const canvasContainer = document.getElementById('canvasContainer');
+const canvasWrapper = document.getElementById('canvasWrapper');
 const emptyState = document.getElementById('emptyState');
 const widthSlider = document.getElementById('widthSlider');
 const widthValue = document.getElementById('widthValue');
@@ -46,6 +47,10 @@ const fullscreenHeader = document.getElementById('fullscreenHeader');
 const fullscreenCloseBtn = document.getElementById('fullscreenCloseBtn');
 const processingOverlay = document.getElementById('processingOverlay');
 const processingText = document.getElementById('processingText');
+const zoomInBtn = document.getElementById('zoomInBtn');
+const zoomOutBtn = document.getElementById('zoomOutBtn');
+const zoomResetBtn = document.getElementById('zoomResetBtn');
+const zoomLevel = document.getElementById('zoomLevel');
 
 // State variables
 let currentImage = null;
@@ -61,6 +66,15 @@ let currentAsciiText = '';
 let sizeMode = 'auto';
 let originalImageWidth = 0;
 let originalImageHeight = 0;
+
+// Zoom and Pan variables
+let currentZoom = 1;
+let minZoom = 0.25;
+let maxZoom = 5;
+let zoomStep = 0.25;
+let isDragging = false;
+let startX, startY;
+let translateX = 0, translateY = 0;
 
 // Character sets
 const charSets = {
@@ -212,6 +226,47 @@ fullscreenCloseBtn.addEventListener('click', toggleFullscreen);
 copyAsciiBtn.addEventListener('click', copyAsciiToClipboard);
 resetBtn.addEventListener('click', resetCanvas);
 
+// Zoom controls
+zoomInBtn.addEventListener('click', () => setZoom(currentZoom + zoomStep));
+zoomOutBtn.addEventListener('click', () => setZoom(currentZoom - zoomStep));
+zoomResetBtn.addEventListener('click', () => {
+    setZoom(1);
+    resetPan();
+});
+
+// Mouse wheel zoom in fullscreen
+canvasContainer.addEventListener('wheel', (e) => {
+    if (isFullscreen) {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -zoomStep : zoomStep;
+        setZoom(currentZoom + delta);
+    }
+});
+
+// Drag functionality
+canvasWrapper.addEventListener('mousedown', startDrag);
+canvasWrapper.addEventListener('mousemove', drag);
+canvasWrapper.addEventListener('mouseup', endDrag);
+canvasWrapper.addEventListener('mouseleave', endDrag);
+
+// Touch support for mobile
+canvasWrapper.addEventListener('touchstart', (e) => {
+    if (isFullscreen) {
+        const touch = e.touches[0];
+        startDrag({ clientX: touch.clientX, clientY: touch.clientY });
+    }
+});
+
+canvasWrapper.addEventListener('touchmove', (e) => {
+    if (isFullscreen) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        drag({ clientX: touch.clientX, clientY: touch.clientY });
+    }
+});
+
+canvasWrapper.addEventListener('touchend', endDrag);
+
 // Sliders
 widthSlider.addEventListener('input', (e) => {
     widthValue.textContent = e.target.value;
@@ -279,6 +334,54 @@ downloadBtn.addEventListener('click', () => {
     link.href = canvas.toDataURL();
     link.click();
 });
+
+function startDrag(e) {
+    if (isFullscreen && currentZoom > 1) {
+        isDragging = true;
+        startX = e.clientX - translateX;
+        startY = e.clientY - translateY;
+        canvasWrapper.classList.add('dragging');
+    }
+}
+
+function drag(e) {
+    if (isDragging && isFullscreen) {
+        e.preventDefault();
+        translateX = e.clientX - startX;
+        translateY = e.clientY - startY;
+        updateTransform();
+    }
+}
+
+function endDrag() {
+    isDragging = false;
+    canvasWrapper.classList.remove('dragging');
+}
+
+function setZoom(zoom) {
+    currentZoom = Math.max(minZoom, Math.min(maxZoom, zoom));
+    updateZoomDisplay();
+    updateTransform();
+    
+    // Reset pan if zoom is 1
+    if (currentZoom === 1) {
+        resetPan();
+    }
+}
+
+function updateZoomDisplay() {
+    zoomLevel.textContent = `${Math.round(currentZoom * 100)}%`;
+}
+
+function updateTransform() {
+    canvasWrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
+}
+
+function resetPan() {
+    translateX = 0;
+    translateY = 0;
+    updateTransform();
+}
 
 function loadImage(file) {
     showProcessing('Memuat gambar...');
@@ -512,11 +615,9 @@ function calculateOptimalDimensions(sourceWidth, sourceHeight) {
     let width, height;
     
     if (sizeMode === 'auto') {
-        // Calculate optimal width based on container and quality
         const maxCharWidth = Math.floor(containerWidth / 8);
         const maxCharHeight = Math.floor(containerHeight / 16);
         
-        // Maintain aspect ratio
         const aspectRatio = sourceHeight / sourceWidth;
         const calculatedWidth = Math.min(maxCharWidth, Math.floor(sourceWidth / 10 * qualityScale));
         const calculatedHeight = Math.floor(calculatedWidth * aspectRatio * 0.5);
@@ -667,16 +768,37 @@ function sharpenImageData(imageData, factor) {
 
 function toggleFullscreen() {
     if (!isFullscreen) {
-        canvasContainer.classList.add('fullscreen');
-        fullscreenHeader.style.display = 'flex';
-        isFullscreen = true;
-        fullscreenBtn.textContent = 'Keluar Layar Penuh';
+        enterFullscreen();
     } else {
-        canvasContainer.classList.remove('fullscreen');
-        fullscreenHeader.style.display = 'none';
-        isFullscreen = false;
-        fullscreenBtn.textContent = 'Layar Penuh';
+        exitFullscreen();
     }
+}
+
+function enterFullscreen() {
+    canvasContainer.classList.add('fullscreen');
+    fullscreenHeader.style.display = 'flex';
+    isFullscreen = true;
+    fullscreenBtn.textContent = 'Keluar Layar Penuh';
+    
+    // Reset zoom and pan when entering fullscreen
+    setZoom(1);
+    resetPan();
+    
+    // Show cursor after a delay
+    setTimeout(() => {
+        canvasContainer.style.cursor = 'default';
+    }, 100);
+}
+
+function exitFullscreen() {
+    canvasContainer.classList.remove('fullscreen');
+    fullscreenHeader.style.display = 'none';
+    isFullscreen = false;
+    fullscreenBtn.textContent = 'Layar Penuh';
+    
+    // Reset zoom and pan when exiting fullscreen
+    setZoom(1);
+    resetPan();
 }
 
 function copyAsciiToClipboard() {
@@ -757,11 +879,32 @@ function resetCanvas() {
     fpsDisplay.textContent = '0 FPS';
     
     if (isFullscreen) {
-        canvasContainer.classList.remove('fullscreen');
-        fullscreenHeader.style.display = 'none';
-        isFullscreen = false;
+        exitFullscreen();
     }
 }
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    if (isFullscreen) {
+        switch(e.key) {
+            case 'Escape':
+                exitFullscreen();
+                break;
+            case '+':
+            case '=':
+                setZoom(currentZoom + zoomStep);
+                break;
+            case '-':
+            case '_':
+                setZoom(currentZoom - zoomStep);
+                break;
+            case '0':
+                setZoom(1);
+                resetPan();
+                break;
+        }
+    }
+});
 
 // Initialize
 charSetSelect.value = 'enhanced';
@@ -770,7 +913,7 @@ qualityValue.textContent = qualityPresets[4].name;
 
 // Handle window resize
 window.addEventListener('resize', () => {
-    if (currentImage && sizeMode === 'auto') {
+    if (currentImage && sizeMode === 'auto' && !isFullscreen) {
         convertToAscii(currentImage);
     }
 });
