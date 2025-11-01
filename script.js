@@ -9,6 +9,8 @@ const canvasContainer = document.getElementById('canvasContainer');
 const emptyState = document.getElementById('emptyState');
 const widthSlider = document.getElementById('widthSlider');
 const widthValue = document.getElementById('widthValue');
+const qualitySlider = document.getElementById('qualitySlider');
+const qualityValue = document.getElementById('qualityValue');
 const fontSlider = document.getElementById('fontSlider');
 const fontValue = document.getElementById('fontValue');
 const contrastSlider = document.getElementById('contrastSlider');
@@ -20,10 +22,14 @@ const sharpnessValue = document.getElementById('sharpnessValue');
 const charSetSelect = document.getElementById('charSet');
 const downloadBtn = document.getElementById('downloadBtn');
 const copyAsciiBtn = document.getElementById('copyAsciiBtn');
+const resetBtn = document.getElementById('resetBtn');
 const colorBtns = document.querySelectorAll('.color-btn');
+const sizeBtns = document.querySelectorAll('.size-btn');
+const customSizeGroup = document.getElementById('customSizeGroup');
 const infoBar = document.getElementById('infoBar');
 const dimensions = document.getElementById('dimensions');
 const characters = document.getElementById('characters');
+const imageSize = document.getElementById('imageSize');
 const tabBtns = document.querySelectorAll('.tab-btn');
 const imageSection = document.getElementById('imageSection');
 const videoSection = document.getElementById('videoSection');
@@ -52,8 +58,11 @@ let fps = 0;
 let webcamStream = null;
 let isFullscreen = false;
 let currentAsciiText = '';
+let sizeMode = 'auto';
+let originalImageWidth = 0;
+let originalImageHeight = 0;
 
-// Character sets with enhanced dark character support
+// Character sets
 const charSets = {
     standard: ' .:-=+*#%@',
     detailed: ' .\'",:;!~-_+<>i?/\\|()1{}[]rcvunxzjftLCJUYXZO0Qoahkbdpqwm*WMB8&%$#@',
@@ -61,6 +70,15 @@ const charSets = {
     blocks: ' ░▒▓█',
     binary: ' 01',
     enhanced: ' .\'`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$'
+};
+
+// Quality presets
+const qualityPresets = {
+    1: { name: 'Rendah', scale: 0.5 },
+    2: { name: 'Sedang', scale: 0.75 },
+    3: { name: 'Bagus', scale: 1 },
+    4: { name: 'Tinggi', scale: 1.5 },
+    5: { name: 'Ultra', scale: 2 }
 };
 
 // Tab switching
@@ -79,27 +97,48 @@ tabBtns.forEach(btn => {
             videoControls.style.display = 'none';
             downloadBtn.style.display = 'block';
             copyAsciiBtn.style.display = 'block';
+            resetBtn.style.display = 'block';
             stopWebcam();
             emptyState.querySelector('.empty-state-icon').textContent = '🖼️';
-            emptyState.querySelector('.empty-state-text').textContent = 'Your ASCII art will appear here';
+            emptyState.querySelector('.empty-state-text').textContent = 'Seni ASCII Anda akan muncul di sini';
         } else if (currentMode === 'video') {
             videoSection.classList.add('active');
             videoControls.style.display = 'flex';
             downloadBtn.style.display = 'none';
             copyAsciiBtn.style.display = 'none';
+            resetBtn.style.display = 'none';
             stopWebcam();
             emptyState.querySelector('.empty-state-icon').textContent = '🎬';
-            emptyState.querySelector('.empty-state-text').textContent = 'Your ASCII video will appear here';
+            emptyState.querySelector('.empty-state-text').textContent = 'Video ASCII Anda akan muncul di sini';
         } else if (currentMode === 'webcam') {
             webcamSection.classList.add('active');
             videoControls.style.display = 'flex';
             downloadBtn.style.display = 'none';
             copyAsciiBtn.style.display = 'none';
+            resetBtn.style.display = 'none';
             emptyState.querySelector('.empty-state-icon').textContent = '📹';
-            emptyState.querySelector('.empty-state-text').textContent = 'Start webcam to see live ASCII';
+            emptyState.querySelector('.empty-state-text').textContent = 'Mulai webcam untuk melihat ASCII langsung';
         }
 
         resetCanvas();
+    });
+});
+
+// Size mode switching
+sizeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        sizeBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        sizeMode = btn.dataset.size;
+        
+        if (sizeMode === 'auto') {
+            customSizeGroup.style.display = 'none';
+            if (currentImage) {
+                convertToAscii(currentImage);
+            }
+        } else {
+            customSizeGroup.style.display = 'block';
+        }
     });
 });
 
@@ -171,10 +210,19 @@ stopBtn.addEventListener('click', () => {
 fullscreenBtn.addEventListener('click', toggleFullscreen);
 fullscreenCloseBtn.addEventListener('click', toggleFullscreen);
 copyAsciiBtn.addEventListener('click', copyAsciiToClipboard);
+resetBtn.addEventListener('click', resetCanvas);
 
 // Sliders
 widthSlider.addEventListener('input', (e) => {
     widthValue.textContent = e.target.value;
+    if (currentMode === 'image' && currentImage && sizeMode === 'custom') {
+        convertToAscii(currentImage);
+    }
+});
+
+qualitySlider.addEventListener('input', (e) => {
+    const quality = parseInt(e.target.value);
+    qualityValue.textContent = qualityPresets[quality].name;
     if (currentMode === 'image' && currentImage) {
         convertToAscii(currentImage);
     }
@@ -233,15 +281,18 @@ downloadBtn.addEventListener('click', () => {
 });
 
 function loadImage(file) {
-    showProcessing('Loading image...');
+    showProcessing('Memuat gambar...');
     const reader = new FileReader();
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
             currentImage = img;
+            originalImageWidth = img.width;
+            originalImageHeight = img.height;
             convertToAscii(img);
             downloadBtn.disabled = false;
             copyAsciiBtn.disabled = false;
+            resetBtn.disabled = false;
             canvasContainer.classList.remove('empty');
             emptyState.style.display = 'none';
             infoBar.style.display = 'flex';
@@ -249,31 +300,28 @@ function loadImage(file) {
             hideProcessing();
         };
         img.onerror = () => {
-            alert('Error loading image. Please try another file.');
+            showToast('Error memuat gambar. Silakan coba file lain.', 'error');
             hideProcessing();
         };
         img.src = e.target.result;
     };
     reader.onerror = () => {
-        alert('Error reading file. Please try another image.');
+        showToast('Error membaca file. Silakan coba gambar lain.', 'error');
         hideProcessing();
     };
     reader.readAsDataURL(file);
 }
 
 function loadVideo(file) {
-    showProcessing('Loading video...');
-    console.log('Loading video:', file.name, file.type, file.size);
+    showProcessing('Memuat video...');
     stopVideo();
     stopWebcam();
     
-    // Create object URL from file
     const url = URL.createObjectURL(file);
     videoSource.src = url;
     videoSource.load();
     
     videoSource.onloadedmetadata = () => {
-        console.log('Video loaded:', videoSource.videoWidth, 'x', videoSource.videoHeight, videoSource.duration + 's');
         canvasContainer.classList.remove('empty');
         emptyState.style.display = 'none';
         infoBar.style.display = 'flex';
@@ -282,7 +330,6 @@ function loadVideo(file) {
         fullscreenBtn.disabled = false;
         hideProcessing();
         
-        // Show first frame
         videoSource.currentTime = 0.1;
     };
 
@@ -293,8 +340,7 @@ function loadVideo(file) {
     };
     
     videoSource.onerror = (e) => {
-        console.error('Video error:', videoSource.error);
-        alert('Cannot load video. Please try another format (MP4, WebM, OGG, MOV, AVI, MKV).');
+        showToast('Tidak dapat memuat video. Silakan coba format lain (MP4, WebM, OGG, MOV, AVI, MKV).', 'error');
         resetCanvas();
         hideProcessing();
     };
@@ -303,11 +349,11 @@ function loadVideo(file) {
 async function toggleWebcam() {
     if (webcamStream) {
         stopWebcam();
-        startWebcamBtn.textContent = 'Start Webcam';
+        startWebcamBtn.textContent = 'Mulai Webcam';
         captureFrameBtn.disabled = true;
     } else {
         try {
-            showProcessing('Starting webcam...');
+            showProcessing('Memulai webcam...');
             webcamStream = await navigator.mediaDevices.getUserMedia({ 
                 video: { 
                     width: { ideal: 1280 },
@@ -330,8 +376,7 @@ async function toggleWebcam() {
             playVideo();
             hideProcessing();
         } catch (error) {
-            alert('Cannot access webcam. Please allow camera permission.');
-            console.error('Webcam error:', error);
+            showToast('Tidak dapat mengakses webcam. Silakan izinkan akses kamera.', 'error');
             hideProcessing();
         }
     }
@@ -342,7 +387,8 @@ function captureFrame() {
         convertToAscii(videoSource);
         downloadBtn.disabled = false;
         copyAsciiBtn.disabled = false;
-        currentMode = 'image'; // Temporarily switch to image mode for download
+        resetBtn.disabled = false;
+        currentMode = 'image';
         setTimeout(() => {
             currentMode = 'webcam';
         }, 100);
@@ -367,7 +413,7 @@ function playVideo() {
         videoSource.play();
     }
     
-    playPauseBtn.textContent = '⏸ Pause';
+    playPauseBtn.textContent = '⏸ Jeda';
     playPauseBtn.classList.add('playing');
     
     renderVideoFrame();
@@ -380,7 +426,7 @@ function pauseVideo() {
         videoSource.pause();
     }
     
-    playPauseBtn.textContent = '▶ Play';
+    playPauseBtn.textContent = '▶ Putar';
     playPauseBtn.classList.remove('playing');
     
     if (animationId) {
@@ -397,7 +443,7 @@ function stopVideo() {
         videoSource.currentTime = 0;
     }
     
-    playPauseBtn.textContent = '▶ Play';
+    playPauseBtn.textContent = '▶ Putar';
     playPauseBtn.classList.remove('playing');
     
     if (animationId) {
@@ -418,7 +464,7 @@ function stopWebcam() {
     
     videoSource.srcObject = null;
     
-    playPauseBtn.textContent = '▶ Play';
+    playPauseBtn.textContent = '▶ Putar';
     playPauseBtn.classList.remove('playing');
     
     if (animationId) {
@@ -429,7 +475,7 @@ function stopWebcam() {
     fpsDisplay.textContent = '0 FPS';
     
     if (startWebcamBtn) {
-        startWebcamBtn.textContent = 'Start Webcam';
+        startWebcamBtn.textContent = 'Mulai Webcam';
     }
 }
 
@@ -457,16 +503,37 @@ function renderVideoFrame() {
     animationId = requestAnimationFrame(renderVideoFrame);
 }
 
+function calculateOptimalDimensions(sourceWidth, sourceHeight) {
+    const containerWidth = canvasContainer.clientWidth - 40;
+    const containerHeight = window.innerHeight - 300;
+    const quality = parseInt(qualitySlider.value);
+    const qualityScale = qualityPresets[quality].scale;
+    
+    let width, height;
+    
+    if (sizeMode === 'auto') {
+        // Calculate optimal width based on container and quality
+        const maxCharWidth = Math.floor(containerWidth / 8);
+        const maxCharHeight = Math.floor(containerHeight / 16);
+        
+        // Maintain aspect ratio
+        const aspectRatio = sourceHeight / sourceWidth;
+        const calculatedWidth = Math.min(maxCharWidth, Math.floor(sourceWidth / 10 * qualityScale));
+        const calculatedHeight = Math.floor(calculatedWidth * aspectRatio * 0.5);
+        
+        width = Math.max(50, Math.min(300, calculatedWidth));
+        height = Math.floor(width * aspectRatio * 0.5);
+    } else {
+        width = parseInt(widthSlider.value);
+        const aspectRatio = sourceHeight / sourceWidth;
+        height = Math.floor(width * aspectRatio * 0.5);
+    }
+    
+    return { width, height };
+}
+
 function convertToAscii(source) {
     try {
-        const width = parseInt(widthSlider.value);
-        const fontSize = parseInt(fontSlider.value);
-        const contrast = parseFloat(contrastSlider.value);
-        const brightness = parseFloat(brightnessSlider.value);
-        const sharpness = parseFloat(sharpnessSlider.value);
-        const charSet = charSets[charSetSelect.value];
-        
-        // Check if source is valid
         const sourceWidth = source.videoWidth || source.width;
         const sourceHeight = source.videoHeight || source.height;
         
@@ -475,28 +542,24 @@ function convertToAscii(source) {
             return;
         }
         
-        const aspectRatio = sourceHeight / sourceWidth;
-        const height = Math.floor(width * aspectRatio * 0.5);
-
-        // Ensure valid dimensions
-        if (width <= 0 || height <= 0) {
-            console.error('Invalid dimensions');
-            return;
-        }
+        const { width, height } = calculateOptimalDimensions(sourceWidth, sourceHeight);
+        const fontSize = parseInt(fontSlider.value);
+        const contrast = parseFloat(contrastSlider.value);
+        const brightness = parseFloat(brightnessSlider.value);
+        const sharpness = parseFloat(sharpnessSlider.value);
+        const charSet = charSets[charSetSelect.value];
 
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
         tempCanvas.width = width;
         tempCanvas.height = height;
         
-        // Apply sharpness with convolution filter
         tempCtx.filter = `contrast(${contrast}) brightness(${brightness})`;
         tempCtx.drawImage(source, 0, 0, width, height);
 
         const imageData = tempCtx.getImageData(0, 0, width, height);
         const pixels = imageData.data;
 
-        // Apply sharpness manually if needed
         if (sharpness > 1.0) {
             sharpenImageData(imageData, sharpness);
         }
@@ -513,7 +576,6 @@ function convertToAscii(source) {
         ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
         ctx.textBaseline = 'top';
 
-        // Store ASCII text for copying
         currentAsciiText = '';
 
         for (let y = 0; y < height; y++) {
@@ -523,40 +585,28 @@ function convertToAscii(source) {
                 let g = pixels[index + 1];
                 let b = pixels[index + 2];
                 
-                // Apply brightness adjustment
                 r = Math.min(255, Math.max(0, r * brightness));
                 g = Math.min(255, Math.max(0, g * brightness));
                 b = Math.min(255, Math.max(0, b * brightness));
                 
-                // Enhanced brightness calculation with gamma correction
                 let brightnessValue = (0.299 * r + 0.587 * g + 0.114 * b);
-                
-                // Apply contrast enhancement with non-linear mapping for dark areas
                 brightnessValue = Math.min(255, Math.max(0, (brightnessValue - 128) * contrast + 128));
                 
-                // Gamma correction to enhance details in dark areas
                 const gamma = 1.5;
                 const normalized = brightnessValue / 255;
                 const gammaCorrected = Math.pow(normalized, 1/gamma) * 255;
-                
-                // Combine original and gamma-corrected values for better detail
                 const finalBrightness = (brightnessValue * 0.7 + gammaCorrected * 0.3);
                 
-                // Improved character selection for dark areas
                 const charIndex = Math.floor((finalBrightness / 255) * (charSet.length - 1));
                 const char = charSet[charIndex];
                 
-                // Add character to ASCII text
                 currentAsciiText += char;
-                
-                // Add line break at the end of each row
                 if (x === width - 1) {
                     currentAsciiText += '\n';
                 }
 
                 let color;
                 if (currentColorMode === 'colorful') {
-                    // Enhanced color accuracy with better saturation
                     const saturation = 1.2;
                     const enhancedR = Math.min(255, r * saturation);
                     const enhancedG = Math.min(255, g * saturation);
@@ -578,8 +628,9 @@ function convertToAscii(source) {
             }
         }
 
-        dimensions.textContent = `${width} × ${height} characters`;
-        characters.textContent = `${width * height} total characters`;
+        dimensions.textContent = `${width} × ${height} karakter`;
+        characters.textContent = `${width * height} total karakter`;
+        imageSize.textContent = `Asli: ${sourceWidth} × ${sourceHeight}px`;
     } catch (error) {
         console.error('Error in convertToAscii:', error);
     }
@@ -591,7 +642,6 @@ function sharpenImageData(imageData, factor) {
     const data = imageData.data;
     const tempData = new Uint8ClampedArray(data);
     
-    // Simple sharpening kernel
     for (let y = 1; y < height - 1; y++) {
         for (let x = 1; x < width - 1; x++) {
             for (let c = 0; c < 3; c++) {
@@ -602,7 +652,6 @@ function sharpenImageData(imageData, factor) {
                 const left = data[(y * width + (x-1)) * 4 + c];
                 const right = data[(y * width + (x+1)) * 4 + c];
                 
-                // Apply sharpening
                 const sharpened = center * (1 + 4 * (factor - 1)) - 
                                  (top + bottom + left + right) * (factor - 1);
                 
@@ -611,7 +660,6 @@ function sharpenImageData(imageData, factor) {
         }
     }
     
-    // Copy back to original image data
     for (let i = 0; i < data.length; i++) {
         data[i] = tempData[i];
     }
@@ -622,43 +670,40 @@ function toggleFullscreen() {
         canvasContainer.classList.add('fullscreen');
         fullscreenHeader.style.display = 'flex';
         isFullscreen = true;
-        fullscreenBtn.textContent = 'Exit Fullscreen';
+        fullscreenBtn.textContent = 'Keluar Layar Penuh';
     } else {
         canvasContainer.classList.remove('fullscreen');
         fullscreenHeader.style.display = 'none';
         isFullscreen = false;
-        fullscreenBtn.textContent = 'Fullscreen';
+        fullscreenBtn.textContent = 'Layar Penuh';
     }
 }
 
 function copyAsciiToClipboard() {
     if (!currentAsciiText) {
-        showToast('No ASCII art to copy');
+        showToast('Tidak ada seni ASCII untuk disalin', 'error');
         return;
     }
     
     navigator.clipboard.writeText(currentAsciiText)
         .then(() => {
-            showToast('ASCII art copied to clipboard!');
+            showToast('Seni ASCII berhasil disalin!', 'success');
         })
         .catch(err => {
-            console.error('Failed to copy: ', err);
-            showToast('Failed to copy ASCII art');
+            showToast('Gagal menyalin seni ASCII', 'error');
         });
 }
 
-function showToast(message) {
+function showToast(message, type = 'info') {
     const toast = document.createElement('div');
-    toast.className = 'toast';
+    toast.className = `toast ${type}`;
     toast.textContent = message;
     document.body.appendChild(toast);
     
-    // Show toast
     setTimeout(() => {
         toast.classList.add('show');
     }, 10);
     
-    // Hide toast after 3 seconds
     setTimeout(() => {
         toast.classList.remove('show');
         setTimeout(() => {
@@ -667,7 +712,7 @@ function showToast(message) {
     }, 3000);
 }
 
-function showProcessing(text = 'Processing...') {
+function showProcessing(text = 'Memproses...') {
     processingText.textContent = text;
     processingOverlay.style.display = 'flex';
 }
@@ -693,13 +738,13 @@ function resetCanvas() {
     currentAsciiText = '';
     downloadBtn.disabled = true;
     copyAsciiBtn.disabled = true;
+    resetBtn.disabled = true;
     playPauseBtn.disabled = true;
     stopBtn.disabled = true;
     captureFrameBtn.disabled = true;
     fullscreenBtn.disabled = true;
-    fullscreenBtn.textContent = 'Fullscreen';
+    fullscreenBtn.textContent = 'Layar Penuh';
     
-    // Clear video source
     if (videoSource.src) {
         URL.revokeObjectURL(videoSource.src);
         videoSource.removeAttribute('src');
@@ -707,11 +752,10 @@ function resetCanvas() {
     }
     
     isPlaying = false;
-    playPauseBtn.textContent = '▶ Play';
+    playPauseBtn.textContent = '▶ Putar';
     playPauseBtn.classList.remove('playing');
     fpsDisplay.textContent = '0 FPS';
     
-    // Reset fullscreen if active
     if (isFullscreen) {
         canvasContainer.classList.remove('fullscreen');
         fullscreenHeader.style.display = 'none';
@@ -719,5 +763,14 @@ function resetCanvas() {
     }
 }
 
-// Initialize with enhanced character set selected
+// Initialize
 charSetSelect.value = 'enhanced';
+qualitySlider.value = 4;
+qualityValue.textContent = qualityPresets[4].name;
+
+// Handle window resize
+window.addEventListener('resize', () => {
+    if (currentImage && sizeMode === 'auto') {
+        convertToAscii(currentImage);
+    }
+});
