@@ -23,8 +23,6 @@
     <div class="container">
         <header>
             <h1>ASCII Art Converter Pro</h1>
-            <p class="subtitle">Transform images, videos, and webcam into sharp, clear text-based art</p>
-            <p class="copyright">© 2023 Davanico Ady Nugroho</p>
         </header>
 
         <div class="mode-tabs">
@@ -40,7 +38,7 @@
                     <div class="upload-area" id="uploadArea">
                         <div class="upload-icon">📎</div>
                         <div class="upload-text">Drop image here</div>
-                        <div class="upload-subtext">JPG, PNG, GIF, WEBP, BMP, TIFF, SVG</div>
+                        <div class="upload-subtext">JPG, PNG, GIF, WEBP, BMP</div>
                     </div>
                     <input type="file" id="fileInput" accept="image/*">
                 </div>
@@ -50,7 +48,7 @@
                     <div class="upload-area" id="videoUploadArea">
                         <div class="upload-icon">🎥</div>
                         <div class="upload-text">Drop video here</div>
-                        <div class="upload-subtext">MP4, WebM, OGG, MOV, AVI, MKV, 3GP</div>
+                        <div class="upload-subtext">MP4, WebM, OGG, MOV</div>
                     </div>
                     <input type="file" id="videoInput" accept="video/*">
                 </div>
@@ -129,7 +127,7 @@
                 </div>
             </div>
 
-            <div>
+            <div class="canvas-section">
                 <div class="canvas-container empty" id="canvasContainer">
                     <div class="processing-overlay" id="processingOverlay">
                         <div class="spinner"></div>
@@ -164,6 +162,11 @@
                 </div>
             </div>
         </div>
+
+        <footer class="footer">
+            <p>Transform images, videos, and webcam into sharp, clear text-based art</p>
+            <p class="copyright">© 2023 Davanico Ady Nugroho</p>
+        </footer>
     </div>
 
     <script src="script.js"></script>
