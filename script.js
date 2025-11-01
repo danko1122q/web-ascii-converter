@@ -82,7 +82,7 @@ const charSets = {
     detailed: ' .\'",:;!~-_+<>i?/\\|()1{}[]rcvunxzjftLCJUYXZO0Qoahkbdpqwm*WMB8&%$#@',
     simple: ' .+#@',
     blocks: ' ░▒▓█',
-    binary: ' 01',
+    binary: ' 0123456789',  // Diubah dari ' 01' menjadi ' 0123456789'
     enhanced: ' .\'`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$'
 };
 
