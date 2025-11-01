@@ -16,16 +16,16 @@
             background: #0a0a0a;
             color: #e0e0e0;
             min-height: 100vh;
-            padding: 40px 20px;
+            padding: 20px;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
         }
 
         header {
-            margin-bottom: 50px;
+            margin-bottom: 30px;
             text-align: center;
         }
 
@@ -91,14 +91,14 @@
 
         .sidebar {
             position: sticky;
-            top: 40px;
+            top: 20px;
         }
 
         .upload-area {
             background: #151515;
             border: 2px dashed #333;
             border-radius: 12px;
-            padding: 50px 30px;
+            padding: 40px 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
@@ -289,18 +289,30 @@
         .canvas-container {
             background: #000;
             border-radius: 12px;
-            padding: 30px;
+            padding: 20px;
             overflow: auto;
             min-height: 400px;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
+            transition: all 0.3s ease;
         }
 
         .canvas-container.empty {
             border: 2px dashed #222;
             background: #0a0a0a;
+        }
+
+        .canvas-container.fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1000;
+            padding: 40px;
+            border-radius: 0;
         }
 
         .empty-state {
@@ -323,6 +335,7 @@
             max-width: 100%;
             height: auto;
             image-rendering: pixelated;
+            transition: all 0.3s ease;
         }
 
         #videoSource {
@@ -393,6 +406,64 @@
             display: block;
         }
 
+        .canvas-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: flex-end;
+        }
+
+        .canvas-btn {
+            padding: 8px 16px;
+            background: #2a2a2a;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .canvas-btn:hover {
+            background: #333;
+        }
+
+        .canvas-btn:disabled {
+            background: #1a1a1a;
+            color: #555;
+            cursor: not-allowed;
+        }
+
+        .processing-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            z-index: 10;
+            display: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         @media (max-width: 1024px) {
             .main-grid {
                 grid-template-columns: 1fr;
@@ -404,6 +475,28 @@
 
             .mode-tabs {
                 justify-content: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 2.2em;
+            }
+
+            .main-grid {
+                gap: 20px;
+            }
+
+            .canvas-container {
+                padding: 15px;
+            }
+
+            .canvas-container.fullscreen {
+                padding: 20px;
             }
         }
     </style>
@@ -429,7 +522,7 @@
                     <div class="upload-area" id="uploadArea">
                         <div class="upload-icon">📎</div>
                         <div class="upload-text">Drop image here</div>
-                        <div class="upload-subtext">or click to browse</div>
+                        <div class="upload-subtext">JPG, PNG, GIF, WEBP, BMP, TIFF, SVG</div>
                     </div>
                     <input type="file" id="fileInput" accept="image/*">
                 </div>
@@ -439,9 +532,9 @@
                     <div class="upload-area" id="videoUploadArea">
                         <div class="upload-icon">🎥</div>
                         <div class="upload-text">Drop video here</div>
-                        <div class="upload-subtext">MP4, WebM, OGG supported</div>
+                        <div class="upload-subtext">MP4, WebM, OGG, MOV, AVI, MKV, 3GP</div>
                     </div>
-                    <input type="file" id="videoInput" accept="video/mp4,video/webm,video/ogg">
+                    <input type="file" id="videoInput" accept="video/*">
                 </div>
 
                 <!-- Webcam -->
@@ -451,7 +544,10 @@
                         <div class="upload-text">Webcam Live</div>
                         <div class="upload-subtext">Real-time ASCII art</div>
                     </div>
-                    <button class="action-btn" id="startWebcamBtn" style="margin-top: 0;">Start Webcam</button>
+                    <div class="button-group">
+                        <button class="action-btn" id="startWebcamBtn" style="margin-top: 0;">Start Webcam</button>
+                        <button class="action-btn" id="captureFrameBtn" style="margin-top: 0;" disabled>Capture Frame</button>
+                    </div>
                 </div>
 
                 <div class="controls">
@@ -459,22 +555,27 @@
                         <label class="control-label">
                             Width <span class="slider-value" id="widthValue">100</span>
                         </label>
-                        <input type="range" id="widthSlider" min="50" max="200" value="100">
+                        <input type="range" id="widthSlider" min="50" max="300" value="100">
                     </div>
 
                     <div class="control-group">
                         <label class="control-label">Font Size <span class="slider-value" id="fontValue">10</span>px</label>
-                        <input type="range" id="fontSlider" min="6" max="16" value="10">
+                        <input type="range" id="fontSlider" min="6" max="20" value="10">
                     </div>
 
                     <div class="control-group">
                         <label class="control-label">Contrast <span class="slider-value" id="contrastValue">1.3</span></label>
-                        <input type="range" id="contrastSlider" min="1.0" max="2.0" step="0.1" value="1.3">
+                        <input type="range" id="contrastSlider" min="1.0" max="2.5" step="0.1" value="1.3">
                     </div>
 
                     <div class="control-group">
                         <label class="control-label">Brightness <span class="slider-value" id="brightnessValue">1.2</span></label>
                         <input type="range" id="brightnessSlider" min="0.5" max="2.0" step="0.1" value="1.2">
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">Sharpness <span class="slider-value" id="sharpnessValue">1.2</span></label>
+                        <input type="range" id="sharpnessSlider" min="0.5" max="2.0" step="0.1" value="1.2">
                     </div>
 
                     <div class="control-group">
@@ -495,7 +596,7 @@
                             <option value="simple">Simple</option>
                             <option value="blocks">Blocks</option>
                             <option value="binary">Binary</option>
-                            <option value="enhanced">Enhanced Dark</option>
+                            <option value="enhanced" selected>Enhanced Dark</option>
                         </select>
                     </div>
 
@@ -505,12 +606,22 @@
 
             <div>
                 <div class="canvas-container empty" id="canvasContainer">
+                    <div class="processing-overlay" id="processingOverlay">
+                        <div class="spinner"></div>
+                    </div>
                     <div class="empty-state" id="emptyState">
                         <div class="empty-state-icon">🖼️</div>
                         <div class="empty-state-text">Your ASCII art will appear here</div>
                     </div>
                     <canvas id="asciiCanvas"></canvas>
                     <video id="videoSource" muted loop playsinline></video>
+                </div>
+
+                <div class="canvas-controls">
+                    <button class="canvas-btn" id="zoomInBtn" disabled>Zoom In</button>
+                    <button class="canvas-btn" id="zoomOutBtn" disabled>Zoom Out</button>
+                    <button class="canvas-btn" id="normalSizeBtn" disabled>Normal Size</button>
+                    <button class="canvas-btn" id="fullscreenBtn" disabled>Fullscreen</button>
                 </div>
 
                 <div class="video-controls" id="videoControls" style="display: none;">
@@ -528,6 +639,7 @@
     </div>
 
     <script>
+        // DOM Elements
         const uploadArea = document.getElementById('uploadArea');
         const videoUploadArea = document.getElementById('videoUploadArea');
         const fileInput = document.getElementById('fileInput');
@@ -544,6 +656,8 @@
         const contrastValue = document.getElementById('contrastValue');
         const brightnessSlider = document.getElementById('brightnessSlider');
         const brightnessValue = document.getElementById('brightnessValue');
+        const sharpnessSlider = document.getElementById('sharpnessSlider');
+        const sharpnessValue = document.getElementById('sharpnessValue');
         const charSetSelect = document.getElementById('charSet');
         const downloadBtn = document.getElementById('downloadBtn');
         const colorBtns = document.querySelectorAll('.color-btn');
@@ -560,7 +674,14 @@
         const fpsDisplay = document.getElementById('fpsDisplay');
         const videoSource = document.getElementById('videoSource');
         const startWebcamBtn = document.getElementById('startWebcamBtn');
+        const captureFrameBtn = document.getElementById('captureFrameBtn');
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        const normalSizeBtn = document.getElementById('normalSizeBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const processingOverlay = document.getElementById('processingOverlay');
 
+        // State variables
         let currentImage = null;
         let currentColorMode = 'colorful';
         let currentMode = 'image';
@@ -569,7 +690,11 @@
         let lastFrameTime = 0;
         let fps = 0;
         let webcamStream = null;
+        let zoomLevel = 1;
+        let isFullscreen = false;
+        let originalCanvasSize = { width: 0, height: 0 };
 
+        // Character sets with enhanced dark character support
         const charSets = {
             standard: ' .:-=+*#%@',
             detailed: ' .\'",:;!~-_+<>i?/\\|()1{}[]rcvunxzjftLCJUYXZO0Qoahkbdpqwm*WMB8&%$#@',
@@ -668,6 +793,7 @@
 
         // Webcam
         startWebcamBtn.addEventListener('click', toggleWebcam);
+        captureFrameBtn.addEventListener('click', captureFrame);
 
         // Video controls
         playPauseBtn.addEventListener('click', togglePlayPause);
@@ -678,6 +804,12 @@
                 stopVideo();
             }
         });
+
+        // Canvas controls
+        zoomInBtn.addEventListener('click', () => zoomCanvas(1.2));
+        zoomOutBtn.addEventListener('click', () => zoomCanvas(0.8));
+        normalSizeBtn.addEventListener('click', resetZoom);
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
 
         // Sliders
         widthSlider.addEventListener('input', (e) => {
@@ -708,6 +840,13 @@
             }
         });
 
+        sharpnessSlider.addEventListener('input', (e) => {
+            sharpnessValue.textContent = e.target.value;
+            if (currentMode === 'image' && currentImage) {
+                convertToAscii(currentImage);
+            }
+        });
+
         charSetSelect.addEventListener('change', () => {
             if (currentMode === 'image' && currentImage) {
                 convertToAscii(currentImage);
@@ -733,6 +872,7 @@
         });
 
         function loadImage(file) {
+            showProcessing();
             const reader = new FileReader();
             reader.onload = (e) => {
                 const img = new Image();
@@ -743,13 +883,24 @@
                     canvasContainer.classList.remove('empty');
                     emptyState.style.display = 'none';
                     infoBar.style.display = 'flex';
+                    enableCanvasControls();
+                    hideProcessing();
+                };
+                img.onerror = () => {
+                    alert('Error loading image. Please try another file.');
+                    hideProcessing();
                 };
                 img.src = e.target.result;
+            };
+            reader.onerror = () => {
+                alert('Error reading file. Please try another image.');
+                hideProcessing();
             };
             reader.readAsDataURL(file);
         }
 
         function loadVideo(file) {
+            showProcessing();
             console.log('Loading video:', file.name, file.type, file.size);
             stopVideo();
             stopWebcam();
@@ -766,6 +917,8 @@
                 infoBar.style.display = 'flex';
                 playPauseBtn.disabled = false;
                 stopBtn.disabled = false;
+                enableCanvasControls();
+                hideProcessing();
                 
                 // Show first frame
                 videoSource.currentTime = 0.1;
@@ -779,8 +932,9 @@
             
             videoSource.onerror = (e) => {
                 console.error('Video error:', videoSource.error);
-                alert('Cannot load video. Please use MP4 (H.264), WebM, or OGG format.');
+                alert('Cannot load video. Please try another format (MP4, WebM, OGG, MOV, AVI, MKV).');
                 resetCanvas();
+                hideProcessing();
             };
         }
 
@@ -788,8 +942,10 @@
             if (webcamStream) {
                 stopWebcam();
                 startWebcamBtn.textContent = 'Start Webcam';
+                captureFrameBtn.disabled = true;
             } else {
                 try {
+                    showProcessing();
                     webcamStream = await navigator.mediaDevices.getUserMedia({ 
                         video: { 
                             width: { ideal: 1280 },
@@ -805,13 +961,28 @@
                     infoBar.style.display = 'flex';
                     playPauseBtn.disabled = false;
                     stopBtn.disabled = false;
+                    captureFrameBtn.disabled = false;
+                    enableCanvasControls();
                     
                     startWebcamBtn.textContent = 'Stop Webcam';
                     playVideo();
+                    hideProcessing();
                 } catch (error) {
                     alert('Cannot access webcam. Please allow camera permission.');
                     console.error('Webcam error:', error);
+                    hideProcessing();
                 }
+            }
+        }
+
+        function captureFrame() {
+            if (webcamStream) {
+                convertToAscii(videoSource);
+                downloadBtn.disabled = false;
+                currentMode = 'image'; // Temporarily switch to image mode for download
+                setTimeout(() => {
+                    currentMode = 'webcam';
+                }, 100);
             }
         }
 
@@ -929,6 +1100,7 @@
                 const fontSize = parseInt(fontSlider.value);
                 const contrast = parseFloat(contrastSlider.value);
                 const brightness = parseFloat(brightnessSlider.value);
+                const sharpness = parseFloat(sharpnessSlider.value);
                 const charSet = charSets[charSetSelect.value];
                 
                 // Check if source is valid
@@ -954,16 +1126,28 @@
                 tempCanvas.width = width;
                 tempCanvas.height = height;
                 
+                // Apply sharpness with convolution filter
+                tempCtx.filter = `contrast(${contrast}) brightness(${brightness})`;
                 tempCtx.drawImage(source, 0, 0, width, height);
 
                 const imageData = tempCtx.getImageData(0, 0, width, height);
                 const pixels = imageData.data;
+
+                // Apply sharpness manually if needed
+                if (sharpness > 1.0) {
+                    sharpenImageData(imageData, sharpness);
+                }
 
                 const charWidth = fontSize * 0.6;
                 const charHeight = fontSize;
 
                 canvas.width = width * charWidth;
                 canvas.height = height * charHeight;
+                
+                // Store original size for zoom functionality
+                if (originalCanvasSize.width === 0) {
+                    originalCanvasSize = { width: canvas.width, height: canvas.height };
+                }
 
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1025,9 +1209,94 @@
 
                 dimensions.textContent = `${width} × ${height} characters`;
                 characters.textContent = `${width * height} total characters`;
+                
+                // Apply zoom if needed
+                if (zoomLevel !== 1) {
+                    applyZoom();
+                }
             } catch (error) {
                 console.error('Error in convertToAscii:', error);
             }
+        }
+
+        function sharpenImageData(imageData, factor) {
+            const width = imageData.width;
+            const height = imageData.height;
+            const data = imageData.data;
+            const tempData = new Uint8ClampedArray(data);
+            
+            // Simple sharpening kernel
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    for (let c = 0; c < 3; c++) {
+                        const idx = (y * width + x) * 4 + c;
+                        const center = data[idx];
+                        const top = data[((y-1) * width + x) * 4 + c];
+                        const bottom = data[((y+1) * width + x) * 4 + c];
+                        const left = data[(y * width + (x-1)) * 4 + c];
+                        const right = data[(y * width + (x+1)) * 4 + c];
+                        
+                        // Apply sharpening
+                        const sharpened = center * (1 + 4 * (factor - 1)) - 
+                                         (top + bottom + left + right) * (factor - 1);
+                        
+                        tempData[idx] = Math.min(255, Math.max(0, sharpened));
+                    }
+                }
+            }
+            
+            // Copy back to original image data
+            for (let i = 0; i < data.length; i++) {
+                data[i] = tempData[i];
+            }
+        }
+
+        function zoomCanvas(factor) {
+            zoomLevel *= factor;
+            applyZoom();
+        }
+
+        function resetZoom() {
+            zoomLevel = 1;
+            applyZoom();
+        }
+
+        function applyZoom() {
+            if (originalCanvasSize.width === 0) return;
+            
+            canvas.style.width = `${originalCanvasSize.width * zoomLevel}px`;
+            canvas.style.height = `${originalCanvasSize.height * zoomLevel}px`;
+            
+            // Update button states
+            zoomOutBtn.disabled = zoomLevel <= 0.5;
+            normalSizeBtn.disabled = zoomLevel === 1;
+        }
+
+        function toggleFullscreen() {
+            if (!isFullscreen) {
+                canvasContainer.classList.add('fullscreen');
+                isFullscreen = true;
+                fullscreenBtn.textContent = 'Exit Fullscreen';
+            } else {
+                canvasContainer.classList.remove('fullscreen');
+                isFullscreen = false;
+                fullscreenBtn.textContent = 'Fullscreen';
+            }
+        }
+
+        function enableCanvasControls() {
+            zoomInBtn.disabled = false;
+            zoomOutBtn.disabled = false;
+            normalSizeBtn.disabled = true; // Initially at normal size
+            fullscreenBtn.disabled = false;
+        }
+
+        function showProcessing() {
+            processingOverlay.style.display = 'flex';
+        }
+
+        function hideProcessing() {
+            processingOverlay.style.display = 'none';
         }
 
         function resetCanvas() {
@@ -1047,6 +1316,15 @@
             downloadBtn.disabled = true;
             playPauseBtn.disabled = true;
             stopBtn.disabled = true;
+            captureFrameBtn.disabled = true;
+            
+            // Reset zoom and canvas controls
+            resetZoom();
+            zoomInBtn.disabled = true;
+            zoomOutBtn.disabled = true;
+            normalSizeBtn.disabled = true;
+            fullscreenBtn.disabled = true;
+            fullscreenBtn.textContent = 'Fullscreen';
             
             // Clear video source
             if (videoSource.src) {
@@ -1059,7 +1337,16 @@
             playPauseBtn.textContent = '▶ Play';
             playPauseBtn.classList.remove('playing');
             fpsDisplay.textContent = '0 FPS';
+            
+            // Reset fullscreen if active
+            if (isFullscreen) {
+                canvasContainer.classList.remove('fullscreen');
+                isFullscreen = false;
+            }
         }
+
+        // Initialize with enhanced character set selected
+        charSetSelect.value = 'enhanced';
     </script>
 </body>
 </html>
