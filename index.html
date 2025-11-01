@@ -46,6 +46,7 @@
             display: flex;
             gap: 10px;
             margin-bottom: 30px;
+            flex-wrap: wrap;
         }
 
         .tab-btn {
@@ -103,6 +104,10 @@
         .upload-area.drag-over {
             border-color: #fff;
             background: #1f1f1f;
+        }
+
+        .upload-area.webcam-area {
+            cursor: default;
         }
 
         .upload-icon {
@@ -347,6 +352,12 @@
             color: #0a0a0a;
         }
 
+        .video-btn:disabled {
+            background: #1a1a1a;
+            color: #555;
+            cursor: not-allowed;
+        }
+
         .fps-display {
             margin-left: auto;
             color: #888;
@@ -381,6 +392,10 @@
             .sidebar {
                 position: static;
             }
+
+            .mode-tabs {
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -388,12 +403,13 @@
     <div class="container">
         <header>
             <h1>ASCII Art Converter</h1>
-            <p class="subtitle">Transform your images and videos into text-based art</p>
+            <p class="subtitle">Transform images, videos, and webcam into text-based art</p>
         </header>
 
         <div class="mode-tabs">
             <button class="tab-btn active" data-mode="image">📷 Image</button>
             <button class="tab-btn" data-mode="video">🎬 Video</button>
+            <button class="tab-btn" data-mode="webcam">📹 Webcam</button>
         </div>
 
         <div class="main-grid">
@@ -415,7 +431,17 @@
                         <div class="upload-text">Drop video here</div>
                         <div class="upload-subtext">MP4, WebM, OGG supported</div>
                     </div>
-                    <input type="file" id="videoInput" accept="video/mp4,video/webm,video/ogg,video/quicktime">
+                    <input type="file" id="videoInput" accept="video/mp4,video/webm,video/ogg">
+                </div>
+
+                <!-- Webcam -->
+                <div class="content-section" id="webcamSection">
+                    <div class="upload-area webcam-area">
+                        <div class="upload-icon">📹</div>
+                        <div class="upload-text">Webcam Live</div>
+                        <div class="upload-subtext">Real-time ASCII art</div>
+                    </div>
+                    <button class="action-btn" id="startWebcamBtn" style="margin-top: 0;">Start Webcam</button>
                 </div>
 
                 <div class="controls">
@@ -463,7 +489,7 @@
                         <div class="empty-state-text">Your ASCII art will appear here</div>
                     </div>
                     <canvas id="asciiCanvas"></canvas>
-                    <video id="videoSource" muted loop></video>
+                    <video id="videoSource" muted loop playsinline></video>
                 </div>
 
                 <div class="video-controls" id="videoControls" style="display: none;">
@@ -502,11 +528,13 @@
         const tabBtns = document.querySelectorAll('.tab-btn');
         const imageSection = document.getElementById('imageSection');
         const videoSection = document.getElementById('videoSection');
+        const webcamSection = document.getElementById('webcamSection');
         const videoControls = document.getElementById('videoControls');
         const playPauseBtn = document.getElementById('playPauseBtn');
         const stopBtn = document.getElementById('stopBtn');
         const fpsDisplay = document.getElementById('fpsDisplay');
         const videoSource = document.getElementById('videoSource');
+        const startWebcamBtn = document.getElementById('startWebcamBtn');
 
         let currentImage = null;
         let currentColorMode = 'colorful';
@@ -515,6 +543,7 @@
         let animationId = null;
         let lastFrameTime = 0;
         let fps = 0;
+        let webcamStream = null;
 
         const charSets = {
             standard: ' .:-=+*#%@',
@@ -533,20 +562,28 @@
 
                 imageSection.classList.remove('active');
                 videoSection.classList.remove('active');
+                webcamSection.classList.remove('active');
                 
                 if (currentMode === 'image') {
                     imageSection.classList.add('active');
                     videoControls.style.display = 'none';
                     downloadBtn.style.display = 'block';
-                    stopVideo();
+                    stopWebcam();
                     emptyState.querySelector('.empty-state-icon').textContent = '🖼️';
                     emptyState.querySelector('.empty-state-text').textContent = 'Your ASCII art will appear here';
-                } else {
+                } else if (currentMode === 'video') {
                     videoSection.classList.add('active');
                     videoControls.style.display = 'flex';
                     downloadBtn.style.display = 'none';
+                    stopWebcam();
                     emptyState.querySelector('.empty-state-icon').textContent = '🎬';
                     emptyState.querySelector('.empty-state-text').textContent = 'Your ASCII video will appear here';
+                } else if (currentMode === 'webcam') {
+                    webcamSection.classList.add('active');
+                    videoControls.style.display = 'flex';
+                    downloadBtn.style.display = 'none';
+                    emptyState.querySelector('.empty-state-icon').textContent = '📹';
+                    emptyState.querySelector('.empty-state-text').textContent = 'Start webcam to see live ASCII';
                 }
 
                 resetCanvas();
@@ -603,9 +640,18 @@
             }
         });
 
+        // Webcam
+        startWebcamBtn.addEventListener('click', toggleWebcam);
+
         // Video controls
         playPauseBtn.addEventListener('click', togglePlayPause);
-        stopBtn.addEventListener('click', stopVideo);
+        stopBtn.addEventListener('click', () => {
+            if (currentMode === 'webcam') {
+                stopWebcam();
+            } else {
+                stopVideo();
+            }
+        });
 
         // Sliders
         widthSlider.addEventListener('input', (e) => {
@@ -664,66 +710,69 @@
         }
 
         function loadVideo(file) {
-            console.log('Loading video:', file.name, file.type);
+            console.log('Loading video:', file.name, file.type, file.size);
             stopVideo();
+            stopWebcam();
             
-            // Clear previous video
-            if (videoSource.src) {
-                try {
-                    URL.revokeObjectURL(videoSource.src);
-                } catch (e) {
-                    console.log('Could not revoke URL');
-                }
-            }
-            
-            // Reset video element
-            videoSource.removeAttribute('src');
-            videoSource.load();
-            
+            // Create object URL from file
             const url = URL.createObjectURL(file);
             videoSource.src = url;
-            
-            let metadataLoaded = false;
+            videoSource.load();
             
             videoSource.onloadedmetadata = () => {
-                console.log('Video metadata loaded:', videoSource.videoWidth, 'x', videoSource.videoHeight);
-                metadataLoaded = true;
+                console.log('Video loaded:', videoSource.videoWidth, 'x', videoSource.videoHeight, videoSource.duration + 's');
+                canvasContainer.classList.remove('empty');
+                emptyState.style.display = 'none';
+                infoBar.style.display = 'flex';
+                playPauseBtn.disabled = false;
+                stopBtn.disabled = false;
+                
+                // Show first frame
+                videoSource.currentTime = 0.1;
             };
-            
-            videoSource.oncanplay = () => {
-                console.log('Video can play');
-                if (metadataLoaded && videoSource.videoWidth > 0) {
-                    canvasContainer.classList.remove('empty');
-                    emptyState.style.display = 'none';
-                    infoBar.style.display = 'flex';
-                    
-                    // Render first frame
-                    setTimeout(() => {
-                        if (videoSource.videoWidth > 0) {
-                            convertToAscii(videoSource);
-                        }
-                    }, 200);
+
+            videoSource.onseeked = () => {
+                if (!isPlaying && videoSource.currentTime < 1) {
+                    convertToAscii(videoSource);
                 }
             };
             
             videoSource.onerror = (e) => {
-                console.error('Video loading failed');
-                const errorMsg = videoSource.error ? 
-                    `Error code: ${videoSource.error.code} - ${videoSource.error.message}` : 
-                    'Unknown error';
-                console.error(errorMsg);
-                alert('Cannot load this video format. Please try:\n- MP4 (H.264)\n- WebM\n- OGG');
+                console.error('Video error:', videoSource.error);
+                alert('Cannot load video. Please use MP4 (H.264), WebM, or OGG format.');
                 resetCanvas();
             };
-            
-            // Fallback timeout
-            setTimeout(() => {
-                if (!metadataLoaded) {
-                    console.error('Video load timeout');
-                    alert('Video loading timeout. File may be too large or format not supported.');
-                    resetCanvas();
+        }
+
+        async function toggleWebcam() {
+            if (webcamStream) {
+                stopWebcam();
+                startWebcamBtn.textContent = 'Start Webcam';
+            } else {
+                try {
+                    webcamStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 },
+                            facingMode: 'user'
+                        } 
+                    });
+                    videoSource.srcObject = webcamStream;
+                    await videoSource.play();
+                    
+                    canvasContainer.classList.remove('empty');
+                    emptyState.style.display = 'none';
+                    infoBar.style.display = 'flex';
+                    playPauseBtn.disabled = false;
+                    stopBtn.disabled = false;
+                    
+                    startWebcamBtn.textContent = 'Stop Webcam';
+                    playVideo();
+                } catch (error) {
+                    alert('Cannot access webcam. Please allow camera permission.');
+                    console.error('Webcam error:', error);
                 }
-            }, 5000);
+            }
         }
 
         function togglePlayPause() {
@@ -735,10 +784,15 @@
         }
 
         function playVideo() {
-            if (!videoSource.src) return;
+            if (currentMode === 'video' && !videoSource.src) return;
+            if (currentMode === 'webcam' && !webcamStream) return;
             
             isPlaying = true;
-            videoSource.play();
+            
+            if (currentMode === 'video') {
+                videoSource.play();
+            }
+            
             playPauseBtn.textContent = '⏸ Pause';
             playPauseBtn.classList.add('playing');
             
@@ -747,7 +801,11 @@
 
         function pauseVideo() {
             isPlaying = false;
-            videoSource.pause();
+            
+            if (currentMode === 'video') {
+                videoSource.pause();
+            }
+            
             playPauseBtn.textContent = '▶ Play';
             playPauseBtn.classList.remove('playing');
             
@@ -759,8 +817,12 @@
 
         function stopVideo() {
             isPlaying = false;
-            videoSource.pause();
-            videoSource.currentTime = 0;
+            
+            if (videoSource.src) {
+                videoSource.pause();
+                videoSource.currentTime = 0;
+            }
+            
             playPauseBtn.textContent = '▶ Play';
             playPauseBtn.classList.remove('playing');
             
@@ -772,6 +834,31 @@
             fpsDisplay.textContent = '0 FPS';
         }
 
+        function stopWebcam() {
+            isPlaying = false;
+            
+            if (webcamStream) {
+                webcamStream.getTracks().forEach(track => track.stop());
+                webcamStream = null;
+            }
+            
+            videoSource.srcObject = null;
+            
+            playPauseBtn.textContent = '▶ Play';
+            playPauseBtn.classList.remove('playing');
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            fpsDisplay.textContent = '0 FPS';
+            
+            if (startWebcamBtn) {
+                startWebcamBtn.textContent = 'Start Webcam';
+            }
+        }
+
         function renderVideoFrame() {
             if (!isPlaying) return;
 
@@ -781,10 +868,13 @@
             
             if (currentTime - lastFrameTime >= frameInterval) {
                 try {
-                    convertToAscii(videoSource);
-                    fps = Math.round(1000 / (currentTime - lastFrameTime));
-                    fpsDisplay.textContent = `${Math.min(fps, targetFPS)} FPS`;
-                    lastFrameTime = currentTime;
+                    if (videoSource.readyState >= videoSource.HAVE_CURRENT_DATA) {
+                        convertToAscii(videoSource);
+                        
+                        fps = Math.round(1000 / (currentTime - lastFrameTime));
+                        fpsDisplay.textContent = `${Math.min(fps, targetFPS)} FPS`;
+                        lastFrameTime = currentTime;
+                    }
                 } catch (error) {
                     console.error('Error rendering frame:', error);
                 }
@@ -800,12 +890,15 @@
                 const charSet = charSets[charSetSelect.value];
                 
                 // Check if source is valid
-                if (!source || (source.videoWidth === 0 && source.width === 0)) {
-                    console.error('Invalid source');
+                const sourceWidth = source.videoWidth || source.width;
+                const sourceHeight = source.videoHeight || source.height;
+                
+                if (!sourceWidth || !sourceHeight) {
+                    console.error('Invalid source dimensions');
                     return;
                 }
                 
-                const aspectRatio = source.videoHeight ? source.videoHeight / source.videoWidth : source.height / source.width;
+                const aspectRatio = sourceHeight / sourceWidth;
                 const height = Math.floor(width * aspectRatio * 0.5);
 
                 // Ensure valid dimensions
@@ -819,79 +912,99 @@
                 tempCanvas.width = width;
                 tempCanvas.height = height;
                 
-                // Draw and check if successful
                 tempCtx.drawImage(source, 0, 0, width, height);
 
                 const imageData = tempCtx.getImageData(0, 0, width, height);
                 const pixels = imageData.data;
 
-            const charWidth = fontSize * 0.6;
-            const charHeight = fontSize;
+                const charWidth = fontSize * 0.6;
+                const charHeight = fontSize;
 
-            canvas.width = width * charWidth;
-            canvas.height = height * charHeight;
+                canvas.width = width * charWidth;
+                canvas.height = height * charHeight;
 
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
-            ctx.textBaseline = 'top';
+                ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
+                ctx.textBaseline = 'top';
 
-            for (let y = 0; y < height; y++) {
-                for (let x = 0; x < width; x++) {
-                    const index = (y * width + x) * 4;
-                    const r = pixels[index];
-                    const g = pixels[index + 1];
-                    const b = pixels[index + 2];
-                    
-                    // Enhanced brightness calculation
-                    const brightness = (0.299 * r + 0.587 * g + 0.114 * b);
-                    
-                    // Contrast enhancement
-                    const contrast = 1.3;
-                    const enhancedBrightness = Math.min(255, Math.max(0, (brightness - 128) * contrast + 128));
-                    
-                    const charIndex = Math.floor((enhancedBrightness / 255) * (charSet.length - 1));
-                    const char = charSet[charIndex];
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const index = (y * width + x) * 4;
+                        const r = pixels[index];
+                        const g = pixels[index + 1];
+                        const b = pixels[index + 2];
+                        
+                        // Enhanced brightness calculation
+                        const brightness = (0.299 * r + 0.587 * g + 0.114 * b);
+                        
+                        // Contrast enhancement
+                        const contrast = 1.3;
+                        const enhancedBrightness = Math.min(255, Math.max(0, (brightness - 128) * contrast + 128));
+                        
+                        const charIndex = Math.floor((enhancedBrightness / 255) * (charSet.length - 1));
+                        const char = charSet[charIndex];
 
-                    let color;
-                    if (currentColorMode === 'colorful') {
-                        const saturation = 1.2;
-                        const enhancedR = Math.min(255, r * saturation);
-                        const enhancedG = Math.min(255, g * saturation);
-                        const enhancedB = Math.min(255, b * saturation);
-                        color = `rgb(${Math.round(enhancedR)}, ${Math.round(enhancedG)}, ${Math.round(enhancedB)})`;
-                    } else if (currentColorMode === 'green') {
-                        const greenValue = Math.round(enhancedBrightness);
-                        color = `rgb(0, ${greenValue}, 0)`;
-                    } else if (currentColorMode === 'bw') {
-                        const bwValue = Math.round(enhancedBrightness);
-                        color = `rgb(${bwValue}, ${bwValue}, ${bwValue})`;
-                    } else if (currentColorMode === 'retro') {
-                        const amber = Math.round(enhancedBrightness);
-                        color = `rgb(${amber}, ${Math.round(amber * 0.7)}, 0)`;
+                        let color;
+                        if (currentColorMode === 'colorful') {
+                            const saturation = 1.2;
+                            const enhancedR = Math.min(255, r * saturation);
+                            const enhancedG = Math.min(255, g * saturation);
+                            const enhancedB = Math.min(255, b * saturation);
+                            color = `rgb(${Math.round(enhancedR)}, ${Math.round(enhancedG)}, ${Math.round(enhancedB)})`;
+                        } else if (currentColorMode === 'green') {
+                            const greenValue = Math.round(enhancedBrightness);
+                            color = `rgb(0, ${greenValue}, 0)`;
+                        } else if (currentColorMode === 'bw') {
+                            const bwValue = Math.round(enhancedBrightness);
+                            color = `rgb(${bwValue}, ${bwValue}, ${bwValue})`;
+                        } else if (currentColorMode === 'retro') {
+                            const amber = Math.round(enhancedBrightness);
+                            color = `rgb(${amber}, ${Math.round(amber * 0.7)}, 0)`;
+                        }
+
+                        ctx.fillStyle = color;
+                        ctx.fillText(char, x * charWidth, y * charHeight);
                     }
-
-                    ctx.fillStyle = color;
-                    ctx.fillText(char, x * charWidth, y * charHeight);
                 }
-            }
 
-            dimensions.textContent = `${width} × ${height} characters`;
-            characters.textContent = `${width * height} total characters`;
+                dimensions.textContent = `${width} × ${height} characters`;
+                characters.textContent = `${width * height} total characters`;
             } catch (error) {
                 console.error('Error in convertToAscii:', error);
             }
         }
 
         function resetCanvas() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            stopVideo();
+            stopWebcam();
+            
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             canvasContainer.classList.add('empty');
             emptyState.style.display = 'block';
             infoBar.style.display = 'none';
             currentImage = null;
             downloadBtn.disabled = true;
-            videoSource.src = '';
+            playPauseBtn.disabled = true;
+            stopBtn.disabled = true;
+            
+            // Clear video source
+            if (videoSource.src) {
+                URL.revokeObjectURL(videoSource.src);
+                videoSource.removeAttribute('src');
+                videoSource.load();
+            }
+            
+            isPlaying = false;
+            playPauseBtn.textContent = '▶ Play';
+            playPauseBtn.classList.remove('playing');
+            fpsDisplay.textContent = '0 FPS';
         }
     </script>
 </body>
