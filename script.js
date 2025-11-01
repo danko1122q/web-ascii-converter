@@ -94,12 +94,9 @@ const qualityPresets = {
 
 // Initialize
 function init() {
-    // Set initial values
     charSetSelect.value = 'enhanced';
     qualitySlider.value = 4;
     qualityValue.textContent = qualityPresets[4].name;
-    
-    // Setup event listeners
     setupEventListeners();
 }
 
@@ -385,7 +382,6 @@ function setZoom(zoom) {
     updateZoomDisplay();
     updateTransform();
     
-    // Reset pan if zoom is 1
     if (currentZoom === 1) {
         resetPan();
     }
@@ -465,7 +461,7 @@ function loadVideo(file) {
     };
     
     videoSource.onerror = (e) => {
-        showToast('Cannot load video. Please try another format (MP4, WebM, OGG, MOV, AVI, MKV).', 'error');
+        showToast('Cannot load video. Please try another format (MP4, WebM, OGG, MOV).', 'error');
         resetCanvas();
         hideProcessing();
     };
@@ -629,11 +625,6 @@ function renderVideoFrame() {
 }
 
 function calculateOptimalDimensions(sourceWidth, sourceHeight) {
-    const containerWidth = canvasContainer.clientWidth - 30;
-    const containerHeight = canvasContainer.clientHeight - 30;
-    const quality = parseInt(qualitySlider.value);
-    const qualityScale = qualityPresets[quality].scale;
-    
     const width = parseInt(widthSlider.value);
     const aspectRatio = sourceHeight / sourceWidth;
     const height = Math.floor(width * aspectRatio * 0.5);
@@ -788,11 +779,9 @@ function enterFullscreen() {
     isFullscreen = true;
     fullscreenBtn.textContent = 'Exit Fullscreen';
     
-    // Reset zoom and pan when entering fullscreen
     setZoom(1);
     resetPan();
     
-    // Show cursor after a delay
     setTimeout(() => {
         canvasContainer.style.cursor = 'default';
     }, 100);
@@ -804,7 +793,6 @@ function exitFullscreen() {
     isFullscreen = false;
     fullscreenBtn.textContent = 'Fullscreen';
     
-    // Reset zoom and pan when exiting fullscreen
     setZoom(1);
     resetPan();
 }
