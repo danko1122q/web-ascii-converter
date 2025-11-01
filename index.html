@@ -498,43 +498,6 @@
             font-family: inherit;
         }
 
-        .gif-controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            justify-content: flex-start;
-            flex-wrap: wrap;
-        }
-
-        .gif-btn {
-            padding: 10px 20px;
-            background: #2a2a2a;
-            border: none;
-            border-radius: 6px;
-            color: #fff;
-            cursor: pointer;
-            font-size: 0.9em;
-            font-weight: 500;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-
-        .gif-btn:hover {
-            background: #333;
-        }
-
-        .gif-btn.recording {
-            background: #ff4444;
-            color: white;
-            animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
-
         @media (max-width: 1024px) {
             .main-grid {
                 grid-template-columns: 1fr;
@@ -570,7 +533,7 @@
                 padding: 50px 15px 15px;
             }
 
-            .video-controls, .gif-controls, .canvas-controls {
+            .video-controls, .canvas-controls {
                 justify-content: center;
             }
         }
@@ -699,9 +662,6 @@
                 </div>
 
                 <div class="canvas-controls">
-                    <button class="canvas-btn" id="zoomInBtn" disabled>Zoom In</button>
-                    <button class="canvas-btn" id="zoomOutBtn" disabled>Zoom Out</button>
-                    <button class="canvas-btn" id="normalSizeBtn" disabled>Normal Size</button>
                     <button class="canvas-btn" id="fullscreenBtn" disabled>Fullscreen</button>
                 </div>
 
@@ -711,12 +671,6 @@
                     <span class="fps-display" id="fpsDisplay">0 FPS</span>
                 </div>
 
-                <div class="gif-controls" id="gifControls" style="display: none;">
-                    <button class="gif-btn" id="recordGifBtn" disabled>Record GIF (5s)</button>
-                    <button class="gif-btn" id="stopGifBtn" disabled>Stop Recording</button>
-                    <span id="gifTimer" style="color: #888; align-self: center;"></span>
-                </div>
-
                 <div class="info-bar" id="infoBar" style="display:none;">
                     <span id="dimensions">—</span>
                     <span id="characters">—</span>
@@ -724,9 +678,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Include gif.js library for GIF creation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
 
     <script>
         // DOM Elements
@@ -765,18 +716,11 @@
         const videoSource = document.getElementById('videoSource');
         const startWebcamBtn = document.getElementById('startWebcamBtn');
         const captureFrameBtn = document.getElementById('captureFrameBtn');
-        const zoomInBtn = document.getElementById('zoomInBtn');
-        const zoomOutBtn = document.getElementById('zoomOutBtn');
-        const normalSizeBtn = document.getElementById('normalSizeBtn');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
         const fullscreenHeader = document.getElementById('fullscreenHeader');
         const fullscreenCloseBtn = document.getElementById('fullscreenCloseBtn');
         const processingOverlay = document.getElementById('processingOverlay');
         const processingText = document.getElementById('processingText');
-        const gifControls = document.getElementById('gifControls');
-        const recordGifBtn = document.getElementById('recordGifBtn');
-        const stopGifBtn = document.getElementById('stopGifBtn');
-        const gifTimer = document.getElementById('gifTimer');
 
         // State variables
         let currentImage = null;
@@ -787,16 +731,7 @@
         let lastFrameTime = 0;
         let fps = 0;
         let webcamStream = null;
-        let zoomLevel = 1;
         let isFullscreen = false;
-        let originalCanvasSize = { width: 0, height: 0 };
-        
-        // GIF recording variables
-        let isRecordingGif = false;
-        let gifRecorder = null;
-        let gifFrames = [];
-        let gifStartTime = 0;
-        const GIF_DURATION = 5000; // 5 seconds
 
         // Character sets with enhanced dark character support
         const charSets = {
@@ -822,7 +757,6 @@
                 if (currentMode === 'image') {
                     imageSection.classList.add('active');
                     videoControls.style.display = 'none';
-                    gifControls.style.display = 'none';
                     downloadBtn.style.display = 'block';
                     stopWebcam();
                     emptyState.querySelector('.empty-state-icon').textContent = '🖼️';
@@ -830,7 +764,6 @@
                 } else if (currentMode === 'video') {
                     videoSection.classList.add('active');
                     videoControls.style.display = 'flex';
-                    gifControls.style.display = 'flex';
                     downloadBtn.style.display = 'none';
                     stopWebcam();
                     emptyState.querySelector('.empty-state-icon').textContent = '🎬';
@@ -838,7 +771,6 @@
                 } else if (currentMode === 'webcam') {
                     webcamSection.classList.add('active');
                     videoControls.style.display = 'flex';
-                    gifControls.style.display = 'flex';
                     downloadBtn.style.display = 'none';
                     emptyState.querySelector('.empty-state-icon').textContent = '📹';
                     emptyState.querySelector('.empty-state-text').textContent = 'Start webcam to see live ASCII';
@@ -913,15 +845,8 @@
         });
 
         // Canvas controls
-        zoomInBtn.addEventListener('click', () => zoomCanvas(1.2));
-        zoomOutBtn.addEventListener('click', () => zoomCanvas(0.8));
-        normalSizeBtn.addEventListener('click', resetZoom);
         fullscreenBtn.addEventListener('click', toggleFullscreen);
         fullscreenCloseBtn.addEventListener('click', toggleFullscreen);
-
-        // GIF controls
-        recordGifBtn.addEventListener('click', startGifRecording);
-        stopGifBtn.addEventListener('click', stopGifRecording);
 
         // Sliders
         widthSlider.addEventListener('input', (e) => {
@@ -995,7 +920,7 @@
                     canvasContainer.classList.remove('empty');
                     emptyState.style.display = 'none';
                     infoBar.style.display = 'flex';
-                    enableCanvasControls();
+                    fullscreenBtn.disabled = false;
                     hideProcessing();
                 };
                 img.onerror = () => {
@@ -1029,8 +954,7 @@
                 infoBar.style.display = 'flex';
                 playPauseBtn.disabled = false;
                 stopBtn.disabled = false;
-                recordGifBtn.disabled = false;
-                enableCanvasControls();
+                fullscreenBtn.disabled = false;
                 hideProcessing();
                 
                 // Show first frame
@@ -1056,7 +980,6 @@
                 stopWebcam();
                 startWebcamBtn.textContent = 'Start Webcam';
                 captureFrameBtn.disabled = true;
-                recordGifBtn.disabled = true;
             } else {
                 try {
                     showProcessing('Starting webcam...');
@@ -1076,8 +999,7 @@
                     playPauseBtn.disabled = false;
                     stopBtn.disabled = false;
                     captureFrameBtn.disabled = false;
-                    recordGifBtn.disabled = false;
-                    enableCanvasControls();
+                    fullscreenBtn.disabled = false;
                     
                     startWebcamBtn.textContent = 'Stop Webcam';
                     playVideo();
@@ -1197,11 +1119,6 @@
                     if (videoSource.readyState >= videoSource.HAVE_CURRENT_DATA) {
                         convertToAscii(videoSource);
                         
-                        // Capture frame for GIF if recording
-                        if (isRecordingGif) {
-                            captureGifFrame();
-                        }
-                        
                         fps = Math.round(1000 / (currentTime - lastFrameTime));
                         fpsDisplay.textContent = `${Math.min(fps, targetFPS)} FPS`;
                         lastFrameTime = currentTime;
@@ -1263,11 +1180,6 @@
 
                 canvas.width = width * charWidth;
                 canvas.height = height * charHeight;
-                
-                // Store original size for zoom functionality
-                if (originalCanvasSize.width === 0) {
-                    originalCanvasSize = { width: canvas.width, height: canvas.height };
-                }
 
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1329,11 +1241,6 @@
 
                 dimensions.textContent = `${width} × ${height} characters`;
                 characters.textContent = `${width * height} total characters`;
-                
-                // Apply zoom if needed
-                if (zoomLevel !== 1) {
-                    applyZoom();
-                }
             } catch (error) {
                 console.error('Error in convertToAscii:', error);
             }
@@ -1371,27 +1278,6 @@
             }
         }
 
-        function zoomCanvas(factor) {
-            zoomLevel *= factor;
-            applyZoom();
-        }
-
-        function resetZoom() {
-            zoomLevel = 1;
-            applyZoom();
-        }
-
-        function applyZoom() {
-            if (originalCanvasSize.width === 0) return;
-            
-            canvas.style.width = `${originalCanvasSize.width * zoomLevel}px`;
-            canvas.style.height = `${originalCanvasSize.height * zoomLevel}px`;
-            
-            // Update button states
-            zoomOutBtn.disabled = zoomLevel <= 0.5;
-            normalSizeBtn.disabled = zoomLevel === 1;
-        }
-
         function toggleFullscreen() {
             if (!isFullscreen) {
                 canvasContainer.classList.add('fullscreen');
@@ -1406,13 +1292,6 @@
             }
         }
 
-        function enableCanvasControls() {
-            zoomInBtn.disabled = false;
-            zoomOutBtn.disabled = false;
-            normalSizeBtn.disabled = true; // Initially at normal size
-            fullscreenBtn.disabled = false;
-        }
-
         function showProcessing(text = 'Processing...') {
             processingText.textContent = text;
             processingOverlay.style.display = 'flex';
@@ -1420,98 +1299,6 @@
 
         function hideProcessing() {
             processingOverlay.style.display = 'none';
-        }
-
-        // GIF Recording Functions
-        function startGifRecording() {
-            if (!isPlaying) {
-                alert('Please start playing the video or webcam first.');
-                return;
-            }
-            
-            isRecordingGif = true;
-            gifStartTime = Date.now();
-            gifFrames = [];
-            
-            // Create GIF recorder
-            gifRecorder = new GIF({
-                workers: 2,
-                quality: 10,
-                width: canvas.width,
-                height: canvas.height,
-                workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'
-            });
-            
-            // Update UI
-            recordGifBtn.disabled = true;
-            recordGifBtn.classList.add('recording');
-            stopGifBtn.disabled = false;
-            
-            // Start countdown
-            updateGifTimer();
-            
-            // Auto-stop after duration
-            setTimeout(() => {
-                if (isRecordingGif) {
-                    stopGifRecording();
-                }
-            }, GIF_DURATION);
-        }
-        
-        function stopGifRecording() {
-            if (!isRecordingGif) return;
-            
-            isRecordingGif = false;
-            
-            // Update UI
-            recordGifBtn.disabled = false;
-            recordGifBtn.classList.remove('recording');
-            stopGifBtn.disabled = true;
-            gifTimer.textContent = '';
-            
-            // Render and download GIF
-            showProcessing('Creating GIF...');
-            
-            setTimeout(() => {
-                gifRecorder.on('finished', function(blob) {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'ascii-art.gif';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    hideProcessing();
-                });
-                
-                gifRecorder.render();
-            }, 500);
-        }
-        
-        function captureGifFrame() {
-            if (!isRecordingGif || !gifRecorder) return;
-            
-            // Add current frame to GIF
-            const frameCanvas = document.createElement('canvas');
-            frameCanvas.width = canvas.width;
-            frameCanvas.height = canvas.height;
-            const frameCtx = frameCanvas.getContext('2d');
-            frameCtx.drawImage(canvas, 0, 0);
-            
-            gifRecorder.addFrame(frameCanvas, { copy: true, delay: 100 });
-        }
-        
-        function updateGifTimer() {
-            if (!isRecordingGif) return;
-            
-            const elapsed = Date.now() - gifStartTime;
-            const remaining = Math.ceil((GIF_DURATION - elapsed) / 1000);
-            gifTimer.textContent = `${remaining}s`;
-            
-            if (isRecordingGif) {
-                requestAnimationFrame(updateGifTimer);
-            }
         }
 
         function resetCanvas() {
@@ -1522,9 +1309,6 @@
             
             stopVideo();
             stopWebcam();
-            if (isRecordingGif) {
-                stopGifRecording();
-            }
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             canvasContainer.classList.add('empty');
@@ -1535,14 +1319,6 @@
             playPauseBtn.disabled = true;
             stopBtn.disabled = true;
             captureFrameBtn.disabled = true;
-            recordGifBtn.disabled = true;
-            stopGifBtn.disabled = true;
-            
-            // Reset zoom and canvas controls
-            resetZoom();
-            zoomInBtn.disabled = true;
-            zoomOutBtn.disabled = true;
-            normalSizeBtn.disabled = true;
             fullscreenBtn.disabled = true;
             fullscreenBtn.textContent = 'Fullscreen';
             
