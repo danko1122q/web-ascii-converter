@@ -1,4 +1,4 @@
-{
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -397,8 +397,22 @@ select:focus {
     width: 100vw;
     height: 100vh;
     z-index: 1000;
-    padding: 60px 40px 40px;
+    padding: 80px 20px 20px;
     border-radius: 0;
+    overflow: auto;
+    background: #000;
+}
+
+.canvas-wrapper {
+    display: inline-block;
+    position: relative;
+    transform-origin: center center;
+    transition: transform 0.3s ease;
+    cursor: grab;
+}
+
+.canvas-wrapper.dragging {
+    cursor: grabbing;
 }
 
 .empty-state {
@@ -566,34 +580,81 @@ canvas {
     top: 0;
     left: 0;
     width: 100%;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.95);
     backdrop-filter: blur(10px);
-    padding: 10px 20px;
+    padding: 15px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     z-index: 1001;
     display: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .fullscreen-title {
     color: var(--accent);
     font-weight: 600;
+    font-size: 1.1em;
 }
 
-.fullscreen-close {
+.fullscreen-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 5px 10px;
+    border-radius: 8px;
+}
+
+.zoom-btn {
     background: rgba(255, 255, 255, 0.2);
     border: none;
     color: var(--accent);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.zoom-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.zoom-level {
+    color: var(--accent);
+    font-size: 0.9em;
+    font-weight: 500;
+    min-width: 50px;
+    text-align: center;
+}
+
+.fullscreen-close {
+    background: rgba(244, 67, 54, 0.8);
+    border: none;
+    color: white;
     padding: 8px 16px;
     border-radius: 6px;
     cursor: pointer;
     font-family: inherit;
     transition: all 0.3s;
+    font-weight: 500;
 }
 
 .fullscreen-close:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(244, 67, 54, 1);
+    transform: translateY(-2px);
 }
 
 .toast {
@@ -658,7 +719,7 @@ canvas {
     }
 
     .canvas-container.fullscreen {
-        padding: 50px 15px 15px;
+        padding: 70px 15px 15px;
     }
 
     .video-controls, .canvas-controls {
@@ -673,6 +734,29 @@ canvas {
         justify-content: center;
         text-align: center;
     }
+
+    .fullscreen-header {
+        padding: 10px 15px;
+    }
+
+    .fullscreen-title {
+        font-size: 0.9em;
+    }
+
+    .zoom-controls {
+        padding: 3px 8px;
+    }
+
+    .zoom-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 14px;
+    }
+
+    .zoom-level {
+        font-size: 0.8em;
+        min-width: 45px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -682,5 +766,9 @@ canvas {
 
     .upload-area {
         padding: 30px 15px;
+    }
+
+    .fullscreen-controls {
+        gap: 10px;
     }
 }
