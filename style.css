@@ -22,8 +22,8 @@ body {
     background: var(--primary-bg);
     color: var(--text-primary);
     min-height: 100vh;
-    padding: 15px;
-    line-height: 1.5;
+    padding: 10px;
+    line-height: 1.4;
     overflow-x: hidden;
 }
 
@@ -32,57 +32,43 @@ body {
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 30px);
+    min-height: calc(100vh - 20px);
 }
 
 header {
-    margin-bottom: 20px;
+    padding: 8px 0;
     text-align: center;
     flex-shrink: 0;
 }
 
 h1 {
-    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    font-size: clamp(1.3rem, 3vw, 1.8rem);
     font-weight: 700;
     color: var(--accent);
-    margin-bottom: 6px;
-    letter-spacing: -1px;
+    letter-spacing: -0.5px;
     background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
 }
 
-.subtitle {
-    color: var(--text-secondary);
-    font-size: clamp(0.9rem, 2vw, 1rem);
-    font-weight: 400;
-    margin-bottom: 4px;
-}
-
-.copyright {
-    color: var(--text-muted);
-    font-size: 0.8em;
-    margin-top: 4px;
-}
-
 .mode-tabs {
     display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
+    gap: 6px;
+    margin: 8px 0;
     flex-wrap: wrap;
     justify-content: center;
     flex-shrink: 0;
 }
 
 .tab-btn {
-    padding: 8px 16px;
+    padding: 6px 12px;
     background: var(--secondary-bg);
     border: 1px solid var(--border-color);
     border-radius: 6px;
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: 0.85em;
+    font-size: 0.8em;
     font-weight: 500;
     transition: all 0.2s ease;
     font-family: inherit;
@@ -103,48 +89,36 @@ h1 {
 
 .main-grid {
     display: grid;
-    grid-template-columns: minmax(320px, 350px) 1fr;
-    gap: 20px;
+    grid-template-columns: 280px 1fr;
+    gap: 12px;
     flex: 1;
     min-height: 0;
+    margin-bottom: 8px;
 }
 
 .sidebar {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    overflow: hidden;
+    height: fit-content;
+    max-height: calc(100vh - 180px);
+    overflow: visible;
 }
 
-.sidebar-content {
-    flex: 1;
-    overflow-y: auto;
-    padding-right: 8px;
-}
-
-.sidebar-content::-webkit-scrollbar {
-    width: 4px;
-}
-
-.sidebar-content::-webkit-scrollbar-track {
-    background: var(--secondary-bg);
-    border-radius: 2px;
-}
-
-.sidebar-content::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 2px;
+.canvas-section {
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
 }
 
 .upload-area {
     background: var(--secondary-bg);
     border: 1px dashed var(--border-color);
-    border-radius: 8px;
-    padding: 30px 15px;
+    border-radius: 6px;
+    padding: 20px 12px;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s ease;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
@@ -183,21 +157,21 @@ h1 {
 }
 
 .upload-icon {
-    font-size: 2.5em;
-    margin-bottom: 12px;
+    font-size: 2em;
+    margin-bottom: 8px;
     opacity: 0.6;
 }
 
 .upload-text {
-    font-size: 0.9em;
+    font-size: 0.85em;
     color: var(--accent);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     font-weight: 500;
 }
 
 .upload-subtext {
     color: var(--text-secondary);
-    font-size: 0.8em;
+    font-size: 0.7em;
 }
 
 #fileInput, #videoInput {
@@ -206,35 +180,46 @@ h1 {
 
 .controls {
     background: var(--secondary-bg);
-    border-radius: 8px;
-    padding: 20px;
+    border-radius: 6px;
+    padding: 12px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    flex: 1;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
+    max-height: calc(100vh - 380px);
+}
+
+.controls::-webkit-scrollbar {
+    width: 4px;
+}
+
+.controls::-webkit-scrollbar-track {
+    background: var(--tertiary-bg);
+    border-radius: 2px;
+}
+
+.controls::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
 }
 
 .control-group {
-    margin-bottom: 18px;
+    margin-bottom: 12px;
 }
 
 .control-group:last-child {
     margin-bottom: 0;
-    margin-top: auto;
 }
 
 .control-label {
     display: block;
-    font-size: 0.85em;
+    font-size: 0.75em;
     color: var(--text-secondary);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     font-weight: 500;
 }
 
 input[type="range"] {
     width: 100%;
-    height: 4px;
+    height: 3px;
     background: var(--tertiary-bg);
     border-radius: 2px;
     outline: none;
@@ -245,8 +230,8 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     background: var(--accent);
     border-radius: 50%;
     cursor: pointer;
@@ -259,8 +244,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 input[type="range"]::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     background: var(--accent);
     border-radius: 50%;
     cursor: pointer;
@@ -276,29 +261,29 @@ input[type="range"]::-moz-range-thumb:hover {
 .slider-value {
     display: inline-block;
     background: var(--tertiary-bg);
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 0.8em;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75em;
     color: var(--accent);
-    min-width: 40px;
+    min-width: 35px;
     text-align: center;
 }
 
 .button-group {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: 6px;
+    margin-bottom: 8px;
 }
 
 .color-btn {
-    padding: 8px;
+    padding: 6px;
     background: var(--tertiary-bg);
     border: 1px solid var(--tertiary-bg);
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: 0.8em;
+    font-size: 0.75em;
     font-weight: 500;
     transition: all 0.2s ease;
     font-family: inherit;
@@ -319,12 +304,12 @@ input[type="range"]::-moz-range-thumb:hover {
 
 select {
     width: 100%;
-    padding: 8px;
+    padding: 6px;
     background: var(--tertiary-bg);
     border: 1px solid var(--tertiary-bg);
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--accent);
-    font-size: 0.8em;
+    font-size: 0.75em;
     cursor: pointer;
     font-family: inherit;
     outline: none;
@@ -343,12 +328,12 @@ select:focus {
 
 .action-btn {
     width: 100%;
-    padding: 10px;
+    padding: 8px;
     background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
     color: var(--primary-bg);
     border: none;
-    border-radius: 6px;
-    font-size: 0.85em;
+    border-radius: 4px;
+    font-size: 0.8em;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -390,17 +375,17 @@ select:focus {
 
 .canvas-container {
     background: #000;
-    border-radius: 8px;
-    padding: 15px;
+    border-radius: 6px;
+    padding: 12px;
     overflow: auto;
-    min-height: 350px;
+    min-height: 300px;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    height: 100%;
+    flex: 1;
 }
 
 .canvas-container.empty {
@@ -415,7 +400,7 @@ select:focus {
     width: 100vw;
     height: 100vh;
     z-index: 1000;
-    padding: 70px 15px 15px;
+    padding: 60px 15px 15px;
     border-radius: 0;
     overflow: auto;
     background: #000;
@@ -439,13 +424,13 @@ select:focus {
 }
 
 .empty-state-icon {
-    font-size: 3.5em;
-    margin-bottom: 12px;
+    font-size: 3em;
+    margin-bottom: 8px;
     opacity: 0.3;
 }
 
 .empty-state-text {
-    font-size: 1em;
+    font-size: 0.9em;
 }
 
 canvas {
@@ -454,7 +439,7 @@ canvas {
     height: auto;
     image-rendering: pixelated;
     transition: all 0.2s ease;
-    border-radius: 6px;
+    border-radius: 4px;
 }
 
 #videoSource {
@@ -463,23 +448,23 @@ canvas {
 
 .video-controls {
     display: flex;
-    gap: 8px;
-    padding: 12px 15px;
+    gap: 6px;
+    padding: 8px 12px;
     background: var(--secondary-bg);
-    border-radius: 6px;
-    margin-top: 12px;
+    border-radius: 4px;
+    margin-top: 8px;
     align-items: center;
     flex-wrap: wrap;
 }
 
 .video-btn {
-    padding: 8px 15px;
+    padding: 6px 12px;
     background: var(--tertiary-bg);
     border: none;
     border-radius: 4px;
     color: var(--accent);
     cursor: pointer;
-    font-size: 0.8em;
+    font-size: 0.75em;
     font-weight: 500;
     transition: all 0.2s ease;
     font-family: inherit;
@@ -504,21 +489,21 @@ canvas {
 .fps-display {
     margin-left: auto;
     color: var(--text-secondary);
-    font-size: 0.8em;
+    font-size: 0.75em;
 }
 
 .info-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 12px;
-    padding: 10px 15px;
+    margin-top: 8px;
+    padding: 8px 12px;
     background: var(--secondary-bg);
-    border-radius: 6px;
-    font-size: 0.8em;
+    border-radius: 4px;
+    font-size: 0.7em;
     color: var(--text-secondary);
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
 }
 
 .content-section {
@@ -531,8 +516,8 @@ canvas {
 
 .canvas-controls {
     display: flex;
-    gap: 8px;
-    margin-top: 12px;
+    gap: 6px;
+    margin-top: 8px;
     justify-content: flex-end;
     flex-wrap: wrap;
 }
@@ -544,7 +529,7 @@ canvas {
     border-radius: 4px;
     color: var(--accent);
     cursor: pointer;
-    font-size: 0.8em;
+    font-size: 0.75em;
     font-weight: 500;
     transition: all 0.2s ease;
     font-family: inherit;
@@ -571,7 +556,7 @@ canvas {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
+    border-radius: 6px;
     z-index: 10;
     display: none;
     flex-direction: column;
@@ -600,7 +585,7 @@ canvas {
     width: 100%;
     background: rgba(0, 0, 0, 0.95);
     backdrop-filter: blur(10px);
-    padding: 12px 15px;
+    padding: 10px 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -612,33 +597,33 @@ canvas {
 .fullscreen-title {
     color: var(--accent);
     font-weight: 600;
-    font-size: 1em;
+    font-size: 0.9em;
 }
 
 .fullscreen-controls {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 12px;
 }
 
 .zoom-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     background: rgba(255, 255, 255, 0.1);
-    padding: 4px 8px;
-    border-radius: 6px;
+    padding: 3px 6px;
+    border-radius: 4px;
 }
 
 .zoom-btn {
     background: rgba(255, 255, 255, 0.2);
     border: none;
     color: var(--accent);
-    width: 28px;
-    height: 28px;
-    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 3px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -652,9 +637,9 @@ canvas {
 
 .zoom-level {
     color: var(--accent);
-    font-size: 0.8em;
+    font-size: 0.75em;
     font-weight: 500;
-    min-width: 45px;
+    min-width: 40px;
     text-align: center;
 }
 
@@ -662,17 +647,37 @@ canvas {
     background: rgba(244, 67, 54, 0.8);
     border: none;
     color: white;
-    padding: 6px 12px;
+    padding: 5px 10px;
     border-radius: 4px;
     cursor: pointer;
     font-family: inherit;
     transition: all 0.2s ease;
     font-weight: 500;
+    font-size: 0.8em;
 }
 
 .fullscreen-close:hover {
     background: rgba(244, 67, 54, 1);
     transform: translateY(-1px);
+}
+
+.footer {
+    text-align: center;
+    padding: 8px 0;
+    margin-top: 8px;
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.footer p {
+    color: var(--text-secondary);
+    font-size: 0.75em;
+    margin: 2px 0;
+}
+
+.footer .copyright {
+    color: var(--text-muted);
+    font-size: 0.7em;
 }
 
 .toast {
@@ -682,9 +687,9 @@ canvas {
     transform: translateX(-50%);
     background: rgba(0, 0, 0, 0.9);
     color: var(--accent);
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-size: 0.8em;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 0.75em;
     z-index: 1000;
     opacity: 0;
     transition: all 0.2s ease;
@@ -710,33 +715,38 @@ canvas {
 @media (max-width: 1200px) {
     .main-grid {
         grid-template-columns: 1fr;
+        gap: 10px;
     }
 
     .sidebar {
-        height: auto;
-        max-height: 50vh;
+        max-height: none;
+    }
+
+    .controls {
+        max-height: 400px;
     }
 }
 
 @media (max-width: 768px) {
     body {
-        padding: 10px;
+        padding: 8px;
     }
 
     h1 {
-        font-size: 1.8rem;
+        font-size: 1.3rem;
     }
 
     .main-grid {
-        gap: 15px;
+        gap: 8px;
     }
 
     .canvas-container {
         padding: 10px;
+        min-height: 250px;
     }
 
     .canvas-container.fullscreen {
-        padding: 60px 10px 10px;
+        padding: 50px 10px 10px;
     }
 
     .video-controls, .canvas-controls {
@@ -757,32 +767,17 @@ canvas {
     }
 
     .fullscreen-title {
-        font-size: 0.9em;
-    }
-
-    .zoom-controls {
-        padding: 3px 6px;
-    }
-
-    .zoom-btn {
-        width: 24px;
-        height: 24px;
-        font-size: 12px;
-    }
-
-    .zoom-level {
-        font-size: 0.7em;
-        min-width: 40px;
+        font-size: 0.8em;
     }
 }
 
 @media (max-width: 480px) {
     .controls {
-        padding: 15px 10px;
+        padding: 10px 8px;
     }
 
     .upload-area {
-        padding: 25px 10px;
+        padding: 18px 10px;
     }
 
     .fullscreen-controls {
