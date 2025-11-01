@@ -42,6 +42,36 @@
             font-weight: 400;
         }
 
+        .mode-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background: #151515;
+            border: 2px solid #151515;
+            border-radius: 8px;
+            color: #888;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .tab-btn:hover {
+            background: #1a1a1a;
+            border-color: #333;
+        }
+
+        .tab-btn.active {
+            background: #fff;
+            color: #0a0a0a;
+            border-color: #fff;
+        }
+
         .main-grid {
             display: grid;
             grid-template-columns: 380px 1fr;
@@ -93,7 +123,7 @@
             font-size: 0.85em;
         }
 
-        #fileInput {
+        #fileInput, #videoInput {
             display: none;
         }
 
@@ -251,6 +281,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
         }
 
         .canvas-container.empty {
@@ -280,6 +311,48 @@
             image-rendering: pixelated;
         }
 
+        #videoSource {
+            display: none;
+        }
+
+        .video-controls {
+            display: flex;
+            gap: 10px;
+            padding: 15px 20px;
+            background: #151515;
+            border-radius: 8px;
+            margin-top: 15px;
+            align-items: center;
+        }
+
+        .video-btn {
+            padding: 10px 20px;
+            background: #2a2a2a;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .video-btn:hover {
+            background: #333;
+        }
+
+        .video-btn.playing {
+            background: #fff;
+            color: #0a0a0a;
+        }
+
+        .fps-display {
+            margin-left: auto;
+            color: #888;
+            font-size: 0.85em;
+        }
+
         .info-bar {
             display: flex;
             justify-content: space-between;
@@ -290,6 +363,14 @@
             border-radius: 8px;
             font-size: 0.85em;
             color: #888;
+        }
+
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
         }
 
         @media (max-width: 1024px) {
@@ -307,18 +388,35 @@
     <div class="container">
         <header>
             <h1>ASCII Art Converter</h1>
-            <p class="subtitle">Transform your images into text-based art</p>
+            <p class="subtitle">Transform your images and videos into text-based art</p>
         </header>
+
+        <div class="mode-tabs">
+            <button class="tab-btn active" data-mode="image">📷 Image</button>
+            <button class="tab-btn" data-mode="video">🎬 Video</button>
+        </div>
 
         <div class="main-grid">
             <div class="sidebar">
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">📎</div>
-                    <div class="upload-text">Drop image here</div>
-                    <div class="upload-subtext">or click to browse</div>
+                <!-- Image Upload -->
+                <div class="content-section active" id="imageSection">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">📎</div>
+                        <div class="upload-text">Drop image here</div>
+                        <div class="upload-subtext">or click to browse</div>
+                    </div>
+                    <input type="file" id="fileInput" accept="image/*">
                 </div>
 
-                <input type="file" id="fileInput" accept="image/*">
+                <!-- Video Upload -->
+                <div class="content-section" id="videoSection">
+                    <div class="upload-area" id="videoUploadArea">
+                        <div class="upload-icon">🎥</div>
+                        <div class="upload-text">Drop video here</div>
+                        <div class="upload-subtext">or click to browse</div>
+                    </div>
+                    <input type="file" id="videoInput" accept="video/*">
+                </div>
 
                 <div class="controls">
                     <div class="control-group">
@@ -360,12 +458,20 @@
 
             <div>
                 <div class="canvas-container empty" id="canvasContainer">
-                    <div class="empty-state">
+                    <div class="empty-state" id="emptyState">
                         <div class="empty-state-icon">🖼️</div>
                         <div class="empty-state-text">Your ASCII art will appear here</div>
                     </div>
                     <canvas id="asciiCanvas"></canvas>
+                    <video id="videoSource" muted loop></video>
                 </div>
+
+                <div class="video-controls" id="videoControls" style="display: none;">
+                    <button class="video-btn" id="playPauseBtn">▶ Play</button>
+                    <button class="video-btn" id="stopBtn">⏹ Stop</button>
+                    <span class="fps-display" id="fpsDisplay">0 FPS</span>
+                </div>
+
                 <div class="info-bar" id="infoBar" style="display:none;">
                     <span id="dimensions">—</span>
                     <span id="characters">—</span>
@@ -376,10 +482,13 @@
 
     <script>
         const uploadArea = document.getElementById('uploadArea');
+        const videoUploadArea = document.getElementById('videoUploadArea');
         const fileInput = document.getElementById('fileInput');
+        const videoInput = document.getElementById('videoInput');
         const canvas = document.getElementById('asciiCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const canvasContainer = document.getElementById('canvasContainer');
+        const emptyState = document.getElementById('emptyState');
         const widthSlider = document.getElementById('widthSlider');
         const widthValue = document.getElementById('widthValue');
         const fontSlider = document.getElementById('fontSlider');
@@ -390,9 +499,22 @@
         const infoBar = document.getElementById('infoBar');
         const dimensions = document.getElementById('dimensions');
         const characters = document.getElementById('characters');
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const imageSection = document.getElementById('imageSection');
+        const videoSection = document.getElementById('videoSection');
+        const videoControls = document.getElementById('videoControls');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const fpsDisplay = document.getElementById('fpsDisplay');
+        const videoSource = document.getElementById('videoSource');
 
         let currentImage = null;
         let currentColorMode = 'colorful';
+        let currentMode = 'image';
+        let isPlaying = false;
+        let animationId = null;
+        let lastFrameTime = 0;
+        let fps = 0;
 
         const charSets = {
             standard: ' .:-=+*#%@',
@@ -402,6 +524,36 @@
             binary: ' 01'
         };
 
+        // Tab switching
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMode = btn.dataset.mode;
+
+                imageSection.classList.remove('active');
+                videoSection.classList.remove('active');
+                
+                if (currentMode === 'image') {
+                    imageSection.classList.add('active');
+                    videoControls.style.display = 'none';
+                    downloadBtn.style.display = 'block';
+                    stopVideo();
+                    emptyState.querySelector('.empty-state-icon').textContent = '🖼️';
+                    emptyState.querySelector('.empty-state-text').textContent = 'Your ASCII art will appear here';
+                } else {
+                    videoSection.classList.add('active');
+                    videoControls.style.display = 'flex';
+                    downloadBtn.style.display = 'none';
+                    emptyState.querySelector('.empty-state-icon').textContent = '🎬';
+                    emptyState.querySelector('.empty-state-text').textContent = 'Your ASCII video will appear here';
+                }
+
+                resetCanvas();
+            });
+        });
+
+        // Image upload
         uploadArea.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -426,18 +578,54 @@
             }
         });
 
+        // Video upload
+        videoUploadArea.addEventListener('click', () => videoInput.click());
+        videoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) loadVideo(file);
+        });
+
+        videoUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            videoUploadArea.classList.add('drag-over');
+        });
+
+        videoUploadArea.addEventListener('dragleave', () => {
+            videoUploadArea.classList.remove('drag-over');
+        });
+
+        videoUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            videoUploadArea.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('video/')) {
+                loadVideo(file);
+            }
+        });
+
+        // Video controls
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        stopBtn.addEventListener('click', stopVideo);
+
+        // Sliders
         widthSlider.addEventListener('input', (e) => {
             widthValue.textContent = e.target.value;
-            if (currentImage) convertToAscii(currentImage);
+            if (currentMode === 'image' && currentImage) {
+                convertToAscii(currentImage);
+            }
         });
 
         fontSlider.addEventListener('input', (e) => {
             fontValue.textContent = e.target.value;
-            if (currentImage) convertToAscii(currentImage);
+            if (currentMode === 'image' && currentImage) {
+                convertToAscii(currentImage);
+            }
         });
 
         charSetSelect.addEventListener('change', () => {
-            if (currentImage) convertToAscii(currentImage);
+            if (currentMode === 'image' && currentImage) {
+                convertToAscii(currentImage);
+            }
         });
 
         colorBtns.forEach(btn => {
@@ -445,7 +633,9 @@
                 colorBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentColorMode = btn.dataset.color;
-                if (currentImage) convertToAscii(currentImage);
+                if (currentMode === 'image' && currentImage) {
+                    convertToAscii(currentImage);
+                }
             });
         });
 
@@ -465,6 +655,7 @@
                     convertToAscii(img);
                     downloadBtn.disabled = false;
                     canvasContainer.classList.remove('empty');
+                    emptyState.style.display = 'none';
                     infoBar.style.display = 'flex';
                 };
                 img.src = e.target.result;
@@ -472,19 +663,91 @@
             reader.readAsDataURL(file);
         }
 
-        function convertToAscii(img) {
+        function loadVideo(file) {
+            const url = URL.createObjectURL(file);
+            videoSource.src = url;
+            videoSource.load();
+            videoSource.onloadeddata = () => {
+                canvasContainer.classList.remove('empty');
+                emptyState.style.display = 'none';
+                infoBar.style.display = 'flex';
+            };
+        }
+
+        function togglePlayPause() {
+            if (isPlaying) {
+                pauseVideo();
+            } else {
+                playVideo();
+            }
+        }
+
+        function playVideo() {
+            if (!videoSource.src) return;
+            
+            isPlaying = true;
+            videoSource.play();
+            playPauseBtn.textContent = '⏸ Pause';
+            playPauseBtn.classList.add('playing');
+            
+            renderVideoFrame();
+        }
+
+        function pauseVideo() {
+            isPlaying = false;
+            videoSource.pause();
+            playPauseBtn.textContent = '▶ Play';
+            playPauseBtn.classList.remove('playing');
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+
+        function stopVideo() {
+            isPlaying = false;
+            videoSource.pause();
+            videoSource.currentTime = 0;
+            playPauseBtn.textContent = '▶ Play';
+            playPauseBtn.classList.remove('playing');
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            fpsDisplay.textContent = '0 FPS';
+        }
+
+        function renderVideoFrame() {
+            if (!isPlaying) return;
+
+            const currentTime = performance.now();
+            if (currentTime - lastFrameTime >= 1000 / 30) { // 30 FPS cap
+                convertToAscii(videoSource);
+                
+                fps = Math.round(1000 / (currentTime - lastFrameTime));
+                fpsDisplay.textContent = `${fps} FPS`;
+                lastFrameTime = currentTime;
+            }
+
+            animationId = requestAnimationFrame(renderVideoFrame);
+        }
+
+        function convertToAscii(source) {
             const width = parseInt(widthSlider.value);
             const fontSize = parseInt(fontSlider.value);
             const charSet = charSets[charSetSelect.value];
             
-            const aspectRatio = img.height / img.width;
+            const aspectRatio = source.videoHeight ? source.videoHeight / source.videoWidth : source.height / source.width;
             const height = Math.floor(width * aspectRatio * 0.5);
 
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
             tempCanvas.width = width;
             tempCanvas.height = height;
-            tempCtx.drawImage(img, 0, 0, width, height);
+            tempCtx.drawImage(source, 0, 0, width, height);
 
             const imageData = tempCtx.getImageData(0, 0, width, height);
             const pixels = imageData.data;
@@ -530,6 +793,15 @@
 
             dimensions.textContent = `${width} × ${height} characters`;
             characters.textContent = `${width * height} total characters`;
+        }
+
+        function resetCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvasContainer.classList.add('empty');
+            emptyState.style.display = 'block';
+            infoBar.style.display = 'none';
+            currentImage = null;
+            downloadBtn.disabled = true;
         }
     </script>
 </body>
