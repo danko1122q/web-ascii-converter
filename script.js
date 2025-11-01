@@ -95,245 +95,288 @@ const qualityPresets = {
     5: { name: 'Ultra', scale: 2 }
 };
 
-// Tab switching
-tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        tabBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentMode = btn.dataset.mode;
+// Initialize
+function init() {
+    // Set initial values
+    charSetSelect.value = 'enhanced';
+    qualitySlider.value = 4;
+    qualityValue.textContent = qualityPresets[4].name;
+    
+    // Setup event listeners
+    setupEventListeners();
+}
 
-        imageSection.classList.remove('active');
-        videoSection.classList.remove('active');
-        webcamSection.classList.remove('active');
-        
-        if (currentMode === 'image') {
-            imageSection.classList.add('active');
-            videoControls.style.display = 'none';
-            downloadBtn.style.display = 'block';
-            copyAsciiBtn.style.display = 'block';
-            resetBtn.style.display = 'block';
-            stopWebcam();
-            emptyState.querySelector('.empty-state-icon').textContent = '🖼️';
-            emptyState.querySelector('.empty-state-text').textContent = 'Seni ASCII Anda akan muncul di sini';
-        } else if (currentMode === 'video') {
-            videoSection.classList.add('active');
-            videoControls.style.display = 'flex';
-            downloadBtn.style.display = 'none';
-            copyAsciiBtn.style.display = 'none';
-            resetBtn.style.display = 'none';
-            stopWebcam();
-            emptyState.querySelector('.empty-state-icon').textContent = '🎬';
-            emptyState.querySelector('.empty-state-text').textContent = 'Video ASCII Anda akan muncul di sini';
-        } else if (currentMode === 'webcam') {
-            webcamSection.classList.add('active');
-            videoControls.style.display = 'flex';
-            downloadBtn.style.display = 'none';
-            copyAsciiBtn.style.display = 'none';
-            resetBtn.style.display = 'none';
-            emptyState.querySelector('.empty-state-icon').textContent = '📹';
-            emptyState.querySelector('.empty-state-text').textContent = 'Mulai webcam untuk melihat ASCII langsung';
-        }
+function setupEventListeners() {
+    // Tab switching
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentMode = btn.dataset.mode;
 
-        resetCanvas();
-    });
-});
-
-// Size mode switching
-sizeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        sizeBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        sizeMode = btn.dataset.size;
-        
-        if (sizeMode === 'auto') {
-            customSizeGroup.style.display = 'none';
-            if (currentImage) {
-                convertToAscii(currentImage);
+            imageSection.classList.remove('active');
+            videoSection.classList.remove('active');
+            webcamSection.classList.remove('active');
+            
+            if (currentMode === 'image') {
+                imageSection.classList.add('active');
+                videoControls.style.display = 'none';
+                downloadBtn.style.display = 'block';
+                copyAsciiBtn.style.display = 'block';
+                resetBtn.style.display = 'block';
+                stopWebcam();
+                emptyState.querySelector('.empty-state-icon').textContent = '🖼️';
+                emptyState.querySelector('.empty-state-text').textContent = 'Seni ASCII Anda akan muncul di sini';
+            } else if (currentMode === 'video') {
+                videoSection.classList.add('active');
+                videoControls.style.display = 'flex';
+                downloadBtn.style.display = 'none';
+                copyAsciiBtn.style.display = 'none';
+                resetBtn.style.display = 'none';
+                stopWebcam();
+                emptyState.querySelector('.empty-state-icon').textContent = '🎬';
+                emptyState.querySelector('.empty-state-text').textContent = 'Video ASCII Anda akan muncul di sini';
+            } else if (currentMode === 'webcam') {
+                webcamSection.classList.add('active');
+                videoControls.style.display = 'flex';
+                downloadBtn.style.display = 'none';
+                copyAsciiBtn.style.display = 'none';
+                resetBtn.style.display = 'none';
+                emptyState.querySelector('.empty-state-icon').textContent = '📹';
+                emptyState.querySelector('.empty-state-text').textContent = 'Mulai webcam untuk melihat ASCII langsung';
             }
-        } else {
-            customSizeGroup.style.display = 'block';
+
+            resetCanvas();
+        });
+    });
+
+    // Size mode switching
+    sizeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            sizeBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            sizeMode = btn.dataset.size;
+            
+            if (sizeMode === 'auto') {
+                customSizeGroup.style.display = 'none';
+                if (currentImage) {
+                    convertToAscii(currentImage);
+                }
+            } else {
+                customSizeGroup.style.display = 'block';
+            }
+        });
+    });
+
+    // Image upload
+    uploadArea.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) loadImage(file);
+    });
+
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('drag-over');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('drag-over');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            loadImage(file);
         }
     });
-});
 
-// Image upload
-uploadArea.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) loadImage(file);
-});
+    // Video upload
+    videoUploadArea.addEventListener('click', () => videoInput.click());
+    videoInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) loadVideo(file);
+    });
 
-uploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    uploadArea.classList.add('drag-over');
-});
-
-uploadArea.addEventListener('dragleave', () => {
-    uploadArea.classList.remove('drag-over');
-});
-
-uploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    uploadArea.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-        loadImage(file);
-    }
-});
-
-// Video upload
-videoUploadArea.addEventListener('click', () => videoInput.click());
-videoInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) loadVideo(file);
-});
-
-videoUploadArea.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    videoUploadArea.classList.add('drag-over');
-});
-
-videoUploadArea.addEventListener('dragleave', () => {
-    videoUploadArea.classList.remove('drag-over');
-});
-
-videoUploadArea.addEventListener('drop', (e) => {
-    e.preventDefault();
-    videoUploadArea.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('video/')) {
-        loadVideo(file);
-    }
-});
-
-// Webcam
-startWebcamBtn.addEventListener('click', toggleWebcam);
-captureFrameBtn.addEventListener('click', captureFrame);
-
-// Video controls
-playPauseBtn.addEventListener('click', togglePlayPause);
-stopBtn.addEventListener('click', () => {
-    if (currentMode === 'webcam') {
-        stopWebcam();
-    } else {
-        stopVideo();
-    }
-});
-
-// Canvas controls
-fullscreenBtn.addEventListener('click', toggleFullscreen);
-fullscreenCloseBtn.addEventListener('click', toggleFullscreen);
-copyAsciiBtn.addEventListener('click', copyAsciiToClipboard);
-resetBtn.addEventListener('click', resetCanvas);
-
-// Zoom controls
-zoomInBtn.addEventListener('click', () => setZoom(currentZoom + zoomStep));
-zoomOutBtn.addEventListener('click', () => setZoom(currentZoom - zoomStep));
-zoomResetBtn.addEventListener('click', () => {
-    setZoom(1);
-    resetPan();
-});
-
-// Mouse wheel zoom in fullscreen
-canvasContainer.addEventListener('wheel', (e) => {
-    if (isFullscreen) {
+    videoUploadArea.addEventListener('dragover', (e) => {
         e.preventDefault();
-        const delta = e.deltaY > 0 ? -zoomStep : zoomStep;
-        setZoom(currentZoom + delta);
-    }
-});
+        videoUploadArea.classList.add('drag-over');
+    });
 
-// Drag functionality
-canvasWrapper.addEventListener('mousedown', startDrag);
-canvasWrapper.addEventListener('mousemove', drag);
-canvasWrapper.addEventListener('mouseup', endDrag);
-canvasWrapper.addEventListener('mouseleave', endDrag);
+    videoUploadArea.addEventListener('dragleave', () => {
+        videoUploadArea.classList.remove('drag-over');
+    });
 
-// Touch support for mobile
-canvasWrapper.addEventListener('touchstart', (e) => {
-    if (isFullscreen) {
-        const touch = e.touches[0];
-        startDrag({ clientX: touch.clientX, clientY: touch.clientY });
-    }
-});
-
-canvasWrapper.addEventListener('touchmove', (e) => {
-    if (isFullscreen) {
+    videoUploadArea.addEventListener('drop', (e) => {
         e.preventDefault();
-        const touch = e.touches[0];
-        drag({ clientX: touch.clientX, clientY: touch.clientY });
-    }
-});
+        videoUploadArea.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('video/')) {
+            loadVideo(file);
+        }
+    });
 
-canvasWrapper.addEventListener('touchend', endDrag);
+    // Webcam
+    startWebcamBtn.addEventListener('click', toggleWebcam);
+    captureFrameBtn.addEventListener('click', captureFrame);
 
-// Sliders
-widthSlider.addEventListener('input', (e) => {
-    widthValue.textContent = e.target.value;
-    if (currentMode === 'image' && currentImage && sizeMode === 'custom') {
-        convertToAscii(currentImage);
-    }
-});
+    // Video controls
+    playPauseBtn.addEventListener('click', togglePlayPause);
+    stopBtn.addEventListener('click', () => {
+        if (currentMode === 'webcam') {
+            stopWebcam();
+        } else {
+            stopVideo();
+        }
+    });
 
-qualitySlider.addEventListener('input', (e) => {
-    const quality = parseInt(e.target.value);
-    qualityValue.textContent = qualityPresets[quality].name;
-    if (currentMode === 'image' && currentImage) {
-        convertToAscii(currentImage);
-    }
-});
+    // Canvas controls
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+    fullscreenCloseBtn.addEventListener('click', toggleFullscreen);
+    copyAsciiBtn.addEventListener('click', copyAsciiToClipboard);
+    resetBtn.addEventListener('click', resetCanvas);
 
-fontSlider.addEventListener('input', (e) => {
-    fontValue.textContent = e.target.value;
-    if (currentMode === 'image' && currentImage) {
-        convertToAscii(currentImage);
-    }
-});
+    // Zoom controls
+    zoomInBtn.addEventListener('click', () => setZoom(currentZoom + zoomStep));
+    zoomOutBtn.addEventListener('click', () => setZoom(currentZoom - zoomStep));
+    zoomResetBtn.addEventListener('click', () => {
+        setZoom(1);
+        resetPan();
+    });
 
-contrastSlider.addEventListener('input', (e) => {
-    contrastValue.textContent = e.target.value;
-    if (currentMode === 'image' && currentImage) {
-        convertToAscii(currentImage);
-    }
-});
+    // Mouse wheel zoom in fullscreen
+    canvasContainer.addEventListener('wheel', (e) => {
+        if (isFullscreen) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -zoomStep : zoomStep;
+            setZoom(currentZoom + delta);
+        }
+    });
 
-brightnessSlider.addEventListener('input', (e) => {
-    brightnessValue.textContent = e.target.value;
-    if (currentMode === 'image' && currentImage) {
-        convertToAscii(currentImage);
-    }
-});
+    // Drag functionality
+    canvasWrapper.addEventListener('mousedown', startDrag);
+    canvasWrapper.addEventListener('mousemove', drag);
+    canvasWrapper.addEventListener('mouseup', endDrag);
+    canvasWrapper.addEventListener('mouseleave', endDrag);
 
-sharpnessSlider.addEventListener('input', (e) => {
-    sharpnessValue.textContent = e.target.value;
-    if (currentMode === 'image' && currentImage) {
-        convertToAscii(currentImage);
-    }
-});
+    // Touch support for mobile
+    canvasWrapper.addEventListener('touchstart', (e) => {
+        if (isFullscreen) {
+            const touch = e.touches[0];
+            startDrag({ clientX: touch.clientX, clientY: touch.clientY });
+        }
+    });
 
-charSetSelect.addEventListener('change', () => {
-    if (currentMode === 'image' && currentImage) {
-        convertToAscii(currentImage);
-    }
-});
+    canvasWrapper.addEventListener('touchmove', (e) => {
+        if (isFullscreen) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            drag({ clientX: touch.clientX, clientY: touch.clientY });
+        }
+    });
 
-colorBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        colorBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentColorMode = btn.dataset.color;
+    canvasWrapper.addEventListener('touchend', endDrag);
+
+    // Sliders
+    widthSlider.addEventListener('input', (e) => {
+        widthValue.textContent = e.target.value;
+        if (currentMode === 'image' && currentImage && sizeMode === 'custom') {
+            convertToAscii(currentImage);
+        }
+    });
+
+    qualitySlider.addEventListener('input', (e) => {
+        const quality = parseInt(e.target.value);
+        qualityValue.textContent = qualityPresets[quality].name;
         if (currentMode === 'image' && currentImage) {
             convertToAscii(currentImage);
         }
     });
-});
 
-downloadBtn.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.download = 'ascii-art.png';
-    link.href = canvas.toDataURL();
-    link.click();
-});
+    fontSlider.addEventListener('input', (e) => {
+        fontValue.textContent = e.target.value;
+        if (currentMode === 'image' && currentImage) {
+            convertToAscii(currentImage);
+        }
+    });
+
+    contrastSlider.addEventListener('input', (e) => {
+        contrastValue.textContent = e.target.value;
+        if (currentMode === 'image' && currentImage) {
+            convertToAscii(currentImage);
+        }
+    });
+
+    brightnessSlider.addEventListener('input', (e) => {
+        brightnessValue.textContent = e.target.value;
+        if (currentMode === 'image' && currentImage) {
+            convertToAscii(currentImage);
+        }
+    });
+
+    sharpnessSlider.addEventListener('input', (e) => {
+        sharpnessValue.textContent = e.target.value;
+        if (currentMode === 'image' && currentImage) {
+            convertToAscii(currentImage);
+        }
+    });
+
+    charSetSelect.addEventListener('change', () => {
+        if (currentMode === 'image' && currentImage) {
+            convertToAscii(currentImage);
+        }
+    });
+
+    colorBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            colorBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentColorMode = btn.dataset.color;
+            if (currentMode === 'image' && currentImage) {
+                convertToAscii(currentImage);
+            }
+        });
+    });
+
+    downloadBtn.addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = 'ascii-art.png';
+        link.href = canvas.toDataURL();
+        link.click();
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (isFullscreen) {
+            switch(e.key) {
+                case 'Escape':
+                    exitFullscreen();
+                    break;
+                case '+':
+                case '=':
+                    setZoom(currentZoom + zoomStep);
+                    break;
+                case '-':
+                case '_':
+                    setZoom(currentZoom - zoomStep);
+                    break;
+                case '0':
+                    setZoom(1);
+                    resetPan();
+                    break;
+            }
+        }
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        if (currentImage && sizeMode === 'auto' && !isFullscreen) {
+            convertToAscii(currentImage);
+        }
+    });
+}
 
 function startDrag(e) {
     if (isFullscreen && currentZoom > 1) {
@@ -883,37 +926,5 @@ function resetCanvas() {
     }
 }
 
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-    if (isFullscreen) {
-        switch(e.key) {
-            case 'Escape':
-                exitFullscreen();
-                break;
-            case '+':
-            case '=':
-                setZoom(currentZoom + zoomStep);
-                break;
-            case '-':
-            case '_':
-                setZoom(currentZoom - zoomStep);
-                break;
-            case '0':
-                setZoom(1);
-                resetPan();
-                break;
-        }
-    }
-});
-
-// Initialize
-charSetSelect.value = 'enhanced';
-qualitySlider.value = 4;
-qualityValue.textContent = qualityPresets[4].name;
-
-// Handle window resize
-window.addEventListener('resize', () => {
-    if (currentImage && sizeMode === 'auto' && !isFullscreen) {
-        convertToAscii(currentImage);
-    }
-});
+// Initialize the application
+document.addEventListener('DOMContentLoaded', init);
