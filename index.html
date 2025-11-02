@@ -56,14 +56,9 @@
 
                 <!-- Webcam -->
                 <div class="content-section" id="webcamSection">
-                    <div class="upload-area webcam-area">
-                        <div class="upload-icon">📹</div>
-                        <div class="upload-text">Webcam Live</div>
-                        <div class="upload-subtext">Real-time ASCII art</div>
-                    </div>
                     <div class="button-group">
-                        <button class="action-btn" id="startWebcamBtn" style="margin-top: 0;">Start Webcam</button>
-                        <button class="action-btn" id="captureFrameBtn" style="margin-top: 0;" disabled>Capture Frame</button>
+                        <button class="action-btn" id="startWebcamBtn">Start Webcam</button>
+                        <button class="action-btn" id="captureFrameBtn" disabled>Capture Frame</button>
                     </div>
                 </div>
 
@@ -115,12 +110,22 @@
                     <div class="control-group">
                         <label class="control-label">Character Set</label>
                         <select id="charSet">
-                            <option value="standard">Standard</option>
+                            <option value="enhanced" selected>Enhanced</option>
                             <option value="detailed">Detailed</option>
+                            <option value="standard">Standard</option>
                             <option value="simple">Simple</option>
                             <option value="blocks">Blocks</option>
+                            <option value="bold">Bold</option>
                             <option value="binary">Numbers</option>
-                            <option value="enhanced" selected>Enhanced Dark</option>
+                            <option value="matrix">Matrix</option>
+                            <option value="shade">Shade</option>
+                            <option value="geometric">Geometric</option>
+                            <option value="slashes">Slashes</option>
+                            <option value="dots">Dots</option>
+                            <option value="waves">Waves</option>
+                            <option value="stars">Stars</option>
+                            <option value="arrows">Arrows</option>
+                            <option value="circuit">Circuit</option>
                         </select>
                     </div>
 

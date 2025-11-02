@@ -73,15 +73,56 @@ let isDragging = false;
 let startX, startY;
 let translateX = 0, translateY = 0;
 
-// Character sets
+// Character sets with accurate density mapping
 const charSets = {
     standard: ' .:-=+*#%@',
-    detailed: ' .\'",:;!~-_+<>i?/\\|()1{}[]rcvunxzjftLCJUYXZO0Qoahkbdpqwm*WMB8&%$#@',
+    detailed: ' .`\'^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
     simple: ' .+#@',
     blocks: ' ░▒▓█',
     binary: ' 0123456789',
-    enhanced: ' .\'`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$'
+    enhanced: ' .\':,;i|!~+=?][}{1)(l\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
+    matrix: ' .:*=+%#@',
+    bold: ' ▁▂▃▄▅▆▇█',
+    shade: ' ·∘∙•●',
+    geometric: ' ◦◊◈◉●',
+    slashes: ' /\\|─═║╬',
+    dots: ' .·:∴∷∴:·.',
+    waves: ' ~≈∼≋≈~',
+    stars: ' .·*★☆★*·.',
+    arrows: ' ›»›»›»',
+    circuit: ' ─┼╬═║╬┼─'
 };
+
+// Pre-calculated character densities for accurate mapping
+const charDensities = {};
+function calculateCharacterDensity(char, fontSize) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = fontSize * 0.6;
+    canvas.height = fontSize;
+    
+    ctx.fillStyle = 'white';
+    ctx.font = `bold ${fontSize}px 'Courier New', 'Segoe UI Symbol', 'Arial Unicode MS', monospace`;
+    ctx.textBaseline = 'top';
+    ctx.fillText(char, 0, 0);
+    
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let whitePixels = 0;
+    for (let i = 0; i < imageData.data.length; i += 4) {
+        if (imageData.data[i] > 128) whitePixels++;
+    }
+    
+    return whitePixels / (canvas.width * canvas.height);
+}
+
+function initCharacterDensities() {
+    for (const setName in charSets) {
+        charDensities[setName] = charSets[setName].split('').map(char => ({
+            char,
+            density: calculateCharacterDensity(char, 10)
+        })).sort((a, b) => a.density - b.density);
+    }
+}
 
 // Quality presets
 const qualityPresets = {
@@ -97,6 +138,7 @@ function init() {
     charSetSelect.value = 'enhanced';
     qualitySlider.value = 4;
     qualityValue.textContent = qualityPresets[4].name;
+    initCharacterDensities();
     setupEventListeners();
 }
 
@@ -647,22 +689,24 @@ function convertToAscii(source) {
         const contrast = parseFloat(contrastSlider.value);
         const brightness = parseFloat(brightnessSlider.value);
         const sharpness = parseFloat(sharpnessSlider.value);
-        const charSet = charSets[charSetSelect.value];
+        const charSetName = charSetSelect.value;
+        const charSet = charSets[charSetName];
+        const densityMap = charDensities[charSetName];
 
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
         tempCanvas.width = width;
         tempCanvas.height = height;
         
-        tempCtx.filter = `contrast(${contrast}) brightness(${brightness})`;
         tempCtx.drawImage(source, 0, 0, width, height);
-
         const imageData = tempCtx.getImageData(0, 0, width, height);
         const pixels = imageData.data;
 
-        if (sharpness > 1.0) {
-            sharpenImageData(imageData, sharpness);
-        }
+        // Advanced image processing
+        applyImageEnhancements(imageData, contrast, brightness, sharpness);
+        
+        // Calculate edge map for better detail
+        const edgeMap = detectEdges(imageData);
 
         const charWidth = fontSize * 0.6;
         const charHeight = fontSize;
@@ -673,10 +717,13 @@ function convertToAscii(source) {
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.font = `bold ${fontSize}px 'Courier New', monospace`;
+        ctx.font = `bold ${fontSize}px 'Courier New', 'Segoe UI Symbol', 'Arial Unicode MS', monospace`;
         ctx.textBaseline = 'top';
 
         currentAsciiText = '';
+
+        // Error diffusion for better gradients
+        const errorBuffer = new Float32Array(width * height);
 
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
@@ -685,42 +732,81 @@ function convertToAscii(source) {
                 let g = pixels[index + 1];
                 let b = pixels[index + 2];
                 
-                r = Math.min(255, Math.max(0, r * brightness));
-                g = Math.min(255, Math.max(0, g * brightness));
-                b = Math.min(255, Math.max(0, b * brightness));
+                // Enhanced luminance calculation (using sRGB weights)
+                let luma = (0.2126 * r + 0.7152 * g + 0.0722 * b);
                 
-                let brightnessValue = (0.299 * r + 0.587 * g + 0.114 * b);
-                brightnessValue = Math.min(255, Math.max(0, (brightnessValue - 128) * contrast + 128));
+                // Add error diffusion
+                luma += errorBuffer[y * width + x];
+                luma = Math.min(255, Math.max(0, luma));
                 
-                const gamma = 1.5;
-                const normalized = brightnessValue / 255;
+                // Edge enhancement
+                const edgeStrength = edgeMap[y * width + x];
+                const enhancedLuma = luma + (edgeStrength * 20);
+                
+                // Adaptive gamma correction
+                const gamma = 1.4 + (edgeStrength * 0.3);
+                const normalized = enhancedLuma / 255;
                 const gammaCorrected = Math.pow(normalized, 1/gamma) * 255;
-                const finalBrightness = (brightnessValue * 0.7 + gammaCorrected * 0.3);
                 
-                const charIndex = Math.floor((finalBrightness / 255) * (charSet.length - 1));
-                const char = charSet[charIndex];
+                // Select character using density mapping for accuracy
+                let char;
+                if (densityMap) {
+                    const targetDensity = gammaCorrected / 255;
+                    let bestMatch = densityMap[0];
+                    let minDiff = Math.abs(bestMatch.density - targetDensity);
+                    
+                    for (let i = 1; i < densityMap.length; i++) {
+                        const diff = Math.abs(densityMap[i].density - targetDensity);
+                        if (diff < minDiff) {
+                            minDiff = diff;
+                            bestMatch = densityMap[i];
+                        }
+                    }
+                    char = bestMatch.char;
+                } else {
+                    const charIndex = Math.floor((gammaCorrected / 255) * (charSet.length - 1));
+                    char = charSet[charIndex];
+                }
                 
                 currentAsciiText += char;
                 if (x === width - 1) {
                     currentAsciiText += '\n';
                 }
 
+                // Error diffusion (Floyd-Steinberg)
+                const error = luma - (gammaCorrected);
+                if (x + 1 < width) {
+                    errorBuffer[y * width + (x + 1)] += error * 7 / 16;
+                }
+                if (y + 1 < height) {
+                    if (x > 0) {
+                        errorBuffer[(y + 1) * width + (x - 1)] += error * 3 / 16;
+                    }
+                    errorBuffer[(y + 1) * width + x] += error * 5 / 16;
+                    if (x + 1 < width) {
+                        errorBuffer[(y + 1) * width + (x + 1)] += error * 1 / 16;
+                    }
+                }
+
+                // Enhanced color rendering
                 let color;
                 if (currentColorMode === 'colorful') {
-                    const saturation = 1.2;
-                    const enhancedR = Math.min(255, r * saturation);
-                    const enhancedG = Math.min(255, g * saturation);
-                    const enhancedB = Math.min(255, b * saturation);
+                    // Advanced color saturation
+                    const luminance = (r + g + b) / 3;
+                    const saturation = 1.3;
+                    const enhancedR = Math.min(255, luminance + (r - luminance) * saturation);
+                    const enhancedG = Math.min(255, luminance + (g - luminance) * saturation);
+                    const enhancedB = Math.min(255, luminance + (b - luminance) * saturation);
                     color = `rgb(${Math.round(enhancedR)}, ${Math.round(enhancedG)}, ${Math.round(enhancedB)})`;
                 } else if (currentColorMode === 'green') {
-                    const greenValue = Math.round(finalBrightness);
-                    color = `rgb(0, ${greenValue}, 0)`;
+                    const greenValue = Math.round(gammaCorrected);
+                    color = `rgb(0, ${greenValue}, ${Math.round(greenValue * 0.3)})`;
                 } else if (currentColorMode === 'bw') {
-                    const bwValue = Math.round(finalBrightness);
+                    const bwValue = Math.round(gammaCorrected);
                     color = `rgb(${bwValue}, ${bwValue}, ${bwValue})`;
                 } else if (currentColorMode === 'retro') {
-                    const amber = Math.round(finalBrightness);
-                    color = `rgb(${amber}, ${Math.round(amber * 0.7)}, 0)`;
+                    const amber = Math.round(gammaCorrected);
+                    color = `rgb(${amber}, ${Math.round(amber * 0.65)}, 0)`;
                 }
 
                 ctx.fillStyle = color;
@@ -736,33 +822,88 @@ function convertToAscii(source) {
     }
 }
 
-function sharpenImageData(imageData, factor) {
+// Advanced image enhancement with multi-stage processing
+function applyImageEnhancements(imageData, contrast, brightness, sharpness) {
     const width = imageData.width;
     const height = imageData.height;
     const data = imageData.data;
-    const tempData = new Uint8ClampedArray(data);
     
-    for (let y = 1; y < height - 1; y++) {
-        for (let x = 1; x < width - 1; x++) {
-            for (let c = 0; c < 3; c++) {
-                const idx = (y * width + x) * 4 + c;
-                const center = data[idx];
-                const top = data[((y-1) * width + x) * 4 + c];
-                const bottom = data[((y+1) * width + x) * 4 + c];
-                const left = data[(y * width + (x-1)) * 4 + c];
-                const right = data[(y * width + (x+1)) * 4 + c];
-                
-                const sharpened = center * (1 + 4 * (factor - 1)) - 
-                                 (top + bottom + left + right) * (factor - 1);
-                
-                tempData[idx] = Math.min(255, Math.max(0, sharpened));
-            }
+    // Step 1: Brightness and Contrast
+    for (let i = 0; i < data.length; i += 4) {
+        for (let c = 0; c < 3; c++) {
+            let value = data[i + c];
+            // Apply brightness
+            value *= brightness;
+            // Apply contrast
+            value = ((value / 255 - 0.5) * contrast + 0.5) * 255;
+            data[i + c] = Math.min(255, Math.max(0, value));
         }
     }
     
-    for (let i = 0; i < data.length; i++) {
-        data[i] = tempData[i];
+    // Step 2: Sharpness (Unsharp Mask)
+    if (sharpness > 1.0) {
+        const tempData = new Uint8ClampedArray(data);
+        const amount = (sharpness - 1.0) * 1.5;
+        
+        for (let y = 1; y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                for (let c = 0; c < 3; c++) {
+                    const idx = (y * width + x) * 4 + c;
+                    const center = tempData[idx];
+                    
+                    // 3x3 Gaussian blur for unsharp mask
+                    const blur = (
+                        tempData[((y-1) * width + (x-1)) * 4 + c] * 0.077 +
+                        tempData[((y-1) * width + x) * 4 + c] * 0.123 +
+                        tempData[((y-1) * width + (x+1)) * 4 + c] * 0.077 +
+                        tempData[(y * width + (x-1)) * 4 + c] * 0.123 +
+                        tempData[(y * width + x) * 4 + c] * 0.20 +
+                        tempData[(y * width + (x+1)) * 4 + c] * 0.123 +
+                        tempData[((y+1) * width + (x-1)) * 4 + c] * 0.077 +
+                        tempData[((y+1) * width + x) * 4 + c] * 0.123 +
+                        tempData[((y+1) * width + (x+1)) * 4 + c] * 0.077
+                    );
+                    
+                    const sharpened = center + (center - blur) * amount;
+                    data[idx] = Math.min(255, Math.max(0, sharpened));
+                }
+            }
+        }
     }
+}
+
+// Sobel edge detection for detail preservation
+function detectEdges(imageData) {
+    const width = imageData.width;
+    const height = imageData.height;
+    const data = imageData.data;
+    const edgeMap = new Float32Array(width * height);
+    
+    // Sobel kernels
+    const sobelX = [-1, 0, 1, -2, 0, 2, -1, 0, 1];
+    const sobelY = [-1, -2, -1, 0, 0, 0, 1, 2, 1];
+    
+    for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+            let gx = 0, gy = 0;
+            
+            for (let ky = -1; ky <= 1; ky++) {
+                for (let kx = -1; kx <= 1; kx++) {
+                    const idx = ((y + ky) * width + (x + kx)) * 4;
+                    const brightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
+                    const kernelIdx = (ky + 1) * 3 + (kx + 1);
+                    
+                    gx += brightness * sobelX[kernelIdx];
+                    gy += brightness * sobelY[kernelIdx];
+                }
+            }
+            
+            const magnitude = Math.sqrt(gx * gx + gy * gy) / 1442; // Normalize
+            edgeMap[y * width + x] = Math.min(1, magnitude);
+        }
+    }
+    
+    return edgeMap;
 }
 
 function toggleFullscreen() {
