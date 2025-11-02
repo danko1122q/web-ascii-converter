@@ -101,5 +101,18 @@ Buka file `index.html` langsung di browser. Semua berjalan di client-side, tidak
 - Intuitive user experience
 - Performance-first approach
 
+## 🖼️ ASCII Art
+
+### Blok
+
+![ASCII Art Blok](sample-image/ascii-art-blok.png)
+
+---
+
+### Number
+
+![ASCII Art Angka](sample-image/ascii-art-number.png)
+
+
 ## 👤 Author
 Davanico Ady Nugroho © 2025
